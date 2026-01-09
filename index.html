@@ -41,6 +41,12 @@ body{
 @keyframes pop{from{transform:scale(.7)}to{transform:scale(1)}}
 .list{width:90%;max-height:60vh;overflow-y:auto}
 .item{display:flex;justify-content:space-between; background:var(--glass);padding:12px;border-radius:15px;margin-bottom:8px}
+
+/* Анимация кейса */
+#case img{transition: transform 0.5s;}
+#case.open img{transform: translateY(-100px) rotate(-10deg);}
+#nftDrop{opacity:0;transition: opacity 0.8s, transform 0.8s;transform: scale(0.5);}
+#nftDrop.show{opacity:1;transform: scale(1);}
 </style>
 </head>
 <body>
@@ -51,8 +57,9 @@ body{
 
 <!-- CASE -->
 <div id="case" class="screen active">
- <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180" style="margin-top:100px;cursor:pointer" onclick="openCasePreview()">
+ <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180" style="margin-top:100px;cursor:pointer">
  <button class="btn" style="margin-top:20px" onclick="openCase()">ОТКРЫТЬ КЕЙС (50)</button>
+ <div id="nftDrop"></div>
 </div>
 
 <!-- INVENTORY -->
@@ -93,7 +100,7 @@ body{
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-const SERVER="https://24ddd5548d384c5e-92-63-106-58.serveousercontent.com";
+const SERVER="https://bb467bab2ab377a7-92-63-106-58.serveousercontent.com";
 let MY_ID=null;
 let MY_NAME="";
 
@@ -129,8 +136,129 @@ async function load(){
         coins=d.balance||0;
         myInv=d.inventory||[];
         document.getElementById("coins").innerText=coins;
+        renderInv();
+        loadMarket();
+        loadTop();
     }catch(e){console.log(e);}
 }
 
 function openCasePreview(){
-    const caseItems=document.getElementById("caseItems"
+    const caseItems=document.getElementById("caseItems");
+    caseItems.innerHTML="";
+    Object.keys(items).forEach(i=>{
+        caseItems.innerHTML+=`<div>${i} — ${items[i].price}💰</div>`;
+    });
+    document.getElementById("casePreview").style.display="flex";
+}
+
+function closePreview(){document.getElementById("casePreview").style.display="none";}
+
+// Анимация открытия кейса
+async function openCase(){
+    if(coins<50) return alert("Недостаточно монет");
+
+    const caseDiv=document.getElementById("case");
+    const nftDiv=document.getElementById("nftDrop");
+
+    // уменьшение монет
+    coins-=50;
+    document.getElementById("coins").innerText=coins;
+
+    // добавляем класс анимации
+    caseDiv.classList.add("open");
+    nftDiv.className=""; // сброс анимации
+    nftDiv.innerHTML="";
+
+    const keys=Object.keys(items);
+    const win=keys[Math.floor(Math.random()*keys.length)];
+    const img=document.createElement("img");
+    img.src=items[win].img;
+    img.style.width="100px";
+    nftDiv.appendChild(img);
+
+    // ждём 0.6 сек для открытия кейса
+    await new Promise(r=>setTimeout(r,600));
+
+    nftDiv.classList.add("show"); // плавное появление NFT
+    await api({action:"add_item",user_id:MY_ID,item:win});
+
+    await load(); // автозагрузка после открытия кейса
+    alert("Выпало: "+win);
+
+    // убираем анимацию кейса через 1 сек
+    setTimeout(()=>caseDiv.classList.remove("open"),1000);
+}
+
+function renderInv(){
+    const invGrid=document.getElementById("invGrid");
+    invGrid.innerHTML=myInv.length?"":"<p>ПУСТО</p>";
+    myInv.forEach((it,i)=>{
+        invGrid.innerHTML+=`
+        <div class="card">
+            <img src="${items[it.name].img}">
+            <div class="small">${it.name}</div>
+            <button class="small" onclick="sellBot(${i})">БОТУ</button>
+            <button class="small" onclick="listMarket(${i})">МАРКЕТ</button>
+        </div>`;
+    });
+}
+
+async function sellBot(i){
+    const it=myInv[i];
+    await api({action:"sell_bot",user_id:MY_ID,item_id:it.id, gain:Math.floor(items[it.name].price*0.75)});
+    await load();
+}
+
+async function listMarket(i){
+    const p=prompt("Цена");
+    if(!p) return;
+    const it=myInv[i];
+    await api({action:"list_market",user_id:MY_ID,name:MY_NAME,item:it.name,item_id:it.id,price:+p});
+    await load();
+}
+
+async function loadMarket(){
+    const r=await fetch(`${SERVER}?action=market`);
+    const d=await r.json();
+    const marketList=document.getElementById("marketList");
+    marketList.innerHTML="";
+    d.forEach(l=>{
+        marketList.innerHTML+=`<div class="item">
+            <span>${l.item} (${l.price}💰)</span>
+            ${l.sid===MY_ID ? `<button onclick="cancelLot(${l.slot})">СНЯТЬ</button>` : `<button onclick="buy(${l.slot})">КУПИТЬ</button>`}
+        </div>`;
+    });
+}
+
+async function buy(s){ 
+    await api({action:"buy",user_id:MY_ID,slot:s}); 
+    await load();
+}
+
+async function cancelLot(s){ 
+    await api({action:"cancel_lot",user_id:MY_ID,slot:s}); 
+    await loadMarket(); 
+}
+
+async function loadTop(){
+    const r=await fetch(`${SERVER}?action=top`);
+    const d=await r.json();
+    const topList=document.getElementById("topList");
+    topList.innerHTML="";
+    d.forEach((p,i)=>topList.innerHTML+=`<div class="item">#${i+1} ${p.u} — ${p.b}💰</div>`);
+}
+
+function show(id,el){
+    document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+    document.querySelectorAll(".nav div").forEach(n=>n.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    el.classList.add("active");
+    if(id==="inv") renderInv();
+    if(id==="market") loadMarket();
+    if(id==="top") loadTop();
+}
+
+load();
+</script>
+</body>
+</html>
