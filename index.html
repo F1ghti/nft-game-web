@@ -38,14 +38,14 @@
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         .drop-item { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; border-radius: 15px; border-left: 4px solid transparent; }
         
-        #error-screen { display: none; color: #ff4b4b; text-align: center; padding: 20px; }
+        #error-screen { display: flex; color: #ff4b4b; text-align: center; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
     <div id="error-screen" class="screen active">
-        <h3>Загрузка профиля...</h3>
-        <p>Пожалуйста, откройте игру через Telegram бота.</p>
+        <h3 id="error-title">Загрузка профиля...</h3>
+        <p id="error-msg">Пожалуйста, подождите или откройте игру через бота.</p>
     </div>
 
     <div id="game-content" style="display: none; width: 100%; height: 100%;">
@@ -100,13 +100,19 @@
     tg.ready();
     tg.expand();
 
-    // ЗАМЕНИ НА СВОЙ URL ИЗ SERVEO ЕСЛИ ОН ИЗМЕНИЛСЯ
+    // ТВОЙ URL ИЗ SERVEO
     const SERVER_URL = "https://df40ce8635b4c51b-92-63-106-58.serveousercontent.com"; 
     
     let MY_ID = null;
     let MY_NAME = "Игрок";
     let coins = 0, myItems = [], marketItems = [], pendingItem = null;
     let isSpinning = false;
+
+    // Заголовки для обхода защиты Serveo
+    const requestHeaders = {
+        'Content-Type': 'application/json',
+        'bypass-tunnel-reminder': 'true'
+    };
 
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
@@ -118,14 +124,19 @@
         if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
             MY_ID = String(tg.initDataUnsafe.user.id);
             MY_NAME = tg.initDataUnsafe.user.first_name || "User";
-            document.getElementById('error-screen').style.display = 'none';
-            document.getElementById('game-content').style.display = 'block';
         } else {
+            document.getElementById('error-title').innerText = "Ошибка доступа";
+            document.getElementById('error-msg').innerText = "Запустите игру через бота.";
             return; 
         }
 
         try {
-            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`, {
+                headers: requestHeaders
+            });
+            
+            if (!r.ok) throw new Error(`Ошибка сервера: ${r.status}`);
+            
             const d = await r.json();
             
             if (d.balance !== undefined) {
@@ -134,16 +145,22 @@
                 marketItems = d.market_items || [];
                 document.getElementById('coins').innerText = coins;
                 
+                document.getElementById('error-screen').style.display = 'none';
+                document.getElementById('game-content').style.display = 'block';
+
                 const activeScreen = document.querySelector('.screen.active').id;
                 if(activeScreen === 'screen-inv') renderInv();
                 if(activeScreen === 'screen-market') renderMarket();
                 if(activeScreen === 'screen-top') renderTop();
             }
-        } catch (e) { console.error(e); }
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('error-title').innerText = "Ошибка связи";
+            document.getElementById('error-msg').innerText = "Сервер недоступен. Проверьте туннель.";
+        }
     }
 
     function renderTop() {
-        // Простая заглушка для ТОПа, пока в main.py нет реального списка
         const list = document.getElementById('top-list');
         list.innerHTML = `<div class="drop-item" style="border-left-color: gold">
             <div style="font-weight:bold">1. ${MY_NAME} (Вы)</div>
@@ -195,7 +212,8 @@
 
     async function collectItem() {
         await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+            method: 'POST', 
+            headers: requestHeaders,
             body: JSON.stringify({ item_name: pendingItem })
         });
         document.getElementById('win-overlay').style.display = 'none';
@@ -223,7 +241,7 @@
     async function sellBot(id, gain) {
         if(!confirm("Продать боту?")) return;
         await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
+            method:'POST', headers: requestHeaders,
             body:JSON.stringify({item_db_id:id, gain:gain})
         });
         loadData();
@@ -233,7 +251,7 @@
         let price = prompt(`Цена для ${name}:`, itemsConfig[name].price);
         if(!price || isNaN(price)) return;
         await fetch(`${SERVER_URL}/market?action=list_on_market&user_id=${MY_ID}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
+            method:'POST', headers: requestHeaders,
             body:JSON.stringify({item_db_id:id, price: parseInt(price), item_name: name})
         });
         loadData();
@@ -259,7 +277,7 @@
 
     async function cancelSale(slotId) {
         await fetch(`${SERVER_URL}/market?action=cancel_market&user_id=${MY_ID}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
+            method:'POST', headers: requestHeaders,
             body:JSON.stringify({slot_id: slotId})
         });
         loadData();
@@ -268,7 +286,7 @@
     async function buyMarket(slotId, price) {
         if(coins < price) return alert("Мало монет!");
         await fetch(`${SERVER_URL}/market?action=buy_market&user_id=${MY_ID}`, {
-            method:'POST', headers:{'Content-Type':'application/json'},
+            method:'POST', headers: requestHeaders,
             body:JSON.stringify({slot_id: slotId})
         });
         loadData();
@@ -290,4 +308,3 @@
 </script>
 </body>
 </html>
-
