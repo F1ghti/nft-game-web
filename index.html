@@ -81,12 +81,11 @@
     tg.expand();
 
     // --- НАСТРОЙКА СЕРВЕРА ---
-    // Вставь сюда ссылку из ngrok (БЕЗ /market в конце)
     const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; 
 
     let coins = parseInt(localStorage.getItem('coins')) || 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
-    let marketLots = []; // Теперь подгружаем с сервера
+    let marketLots = []; 
 
     const itemsConfig = {
         "Common Bot": { price: 50, img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
@@ -144,7 +143,6 @@
         }
     }
 
-    // ВЫСТАВЛЕНИЕ ЛОТА (БЕЗ ЗАКРЫТИЯ)
     async function listOnMarket(id) {
         const idx = myItems.findIndex(i => i.id === id);
         const item = myItems[idx];
@@ -172,23 +170,31 @@
                 tg.showAlert("✅ Предмет выставлен!");
             }
         } catch (e) {
-            tg.showAlert("❌ Ошибка связи с сервером! Проверь VPN и ngrok.");
+            tg.showAlert("❌ Ошибка связи с сервером!");
         }
     }
 
-    // СНЯТИЕ С МАРКЕТА (БЕЗ ЗАКРЫТИЯ)
+    // ИСПРАВЛЕННАЯ ФУНКЦИЯ СНЯТИЯ (с защитой)
     async function removeFromMarket(id) {
+        const userId = tg.initDataUnsafe.user?.id || 123;
+        
         try {
             const response = await fetch(`${SERVER_URL}/market`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ action: "remove_lot", id: id })
+                body: JSON.stringify({ 
+                    action: "remove_lot", 
+                    id: id,
+                    user_id: userId // Передаем ID для проверки на сервере
+                })
             });
 
             if(response.ok) {
-                // После удаления на сервере, обновляем локальный вид
+                tg.showAlert("📦 Предмет снят с продажи!");
                 renderMarket(); 
-                tg.showAlert("📦 Предмет возвращен в инвентарь (обновите вкладку)");
+            } else {
+                const data = await response.json();
+                tg.showAlert("❌ " + data.error);
             }
         } catch (e) {
             tg.showAlert("❌ Не удалось связаться с сервером.");
@@ -210,7 +216,6 @@
         });
     }
 
-    // ЗАГРУЗКА ЛОТОВ С СЕРВЕРА
     async function renderMarket() {
         const grid = document.getElementById('market-grid');
         grid.innerHTML = "Загрузка...";
@@ -226,15 +231,17 @@
                 const conf = itemsConfig[l.name];
                 const card = document.createElement('div');
                 card.className = 'inv-card';
-                card.style.borderColor = l.ownerId == uid ? "#00ff88" : conf.color;
+                // Подсвечиваем свои лоты зеленым
+                card.style.borderColor = String(l.ownerId) === String(uid) ? "#00ff88" : conf.color;
+                
                 card.innerHTML = `
                     <img src="${conf.img}"><br>
-                    <small>${l.ownerId == uid ? "ВАШ ЛОТ" : (l.sellerName || "Игрок")}</small><br>
+                    <small>${String(l.ownerId) === String(uid) ? "ВАШ ЛОТ" : (l.sellerName || "Игрок")}</small><br>
                     <b>${l.name}</b><br>
                     <span style="color:#00ff88">💰 ${l.marketPrice}</span>
-                    ${l.ownerId == uid ? 
-                        `<button class="sell-btn" onclick="removeFromMarket(${l.id})">СНЯТЬ</button>` : 
-                        `<button class="sell-btn market-btn" onclick="tg.showAlert('Покупка будет доступна в след. обновлении!')">КУПИТЬ</button>`
+                    ${String(l.ownerId) === String(uid) ? 
+                        `<button class="sell-btn" onclick="removeFromMarket('${l.id}')">СНЯТЬ</button>` : 
+                        `<button class="sell-btn market-btn" onclick="tg.showAlert('Покупка скоро появится!')">КУПИТЬ</button>`
                     }`;
                 grid.appendChild(card);
             });
@@ -261,5 +268,3 @@
 </script>
 </body>
 </html>
-
-
