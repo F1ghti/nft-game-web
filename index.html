@@ -32,13 +32,13 @@
 
     <div id="error-screen" style="display:none; text-align:center; padding:50px;">
         <h2>❌ Ошибка авторизации</h2>
-        <p>Пожалуйста, запустите игру через официального бота.</p>
+        <p>Пожалуйста, запустите игру через официального бота в Telegram.</p>
     </div>
 
-    <div id="game-content" style="width:100%; display:contents;">
+    <div id="game-content" style="width:100%; visibility: hidden;">
         <div class="top-bar">
-            <div class="balance-box">💰 <span id="coins">...</span></div>
-            <div id="u-name" style="font-weight: bold; color: var(--primary);">...</div>
+            <div class="balance-box">💰 <span id="coins">0</span></div>
+            <div id="u-name" style="font-weight: bold; color: var(--primary);">Загрузка...</div>
         </div>
 
         <div id="screen-case" class="screen active">
@@ -74,34 +74,56 @@
 
 <script>
     const tg = window.Telegram.WebApp;
+    tg.ready(); // Критически важно: сообщаем TG, что мы готовы принимать данные
     tg.expand();
+
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
     
-    // СТРОГАЯ ПРОВЕРКА ID
-    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-    const MY_NAME = tg.initDataUnsafe.user?.first_name || "Игрок";
-
-    if (!MY_ID) {
-        document.getElementById('game-content').style.display = 'none';
-        document.getElementById('error-screen').style.display = 'block';
-    }
-
-    document.getElementById('u-name').innerText = MY_NAME;
+    // Переменные данных
+    let MY_ID = null;
+    let MY_NAME = "Игрок";
     let coins = 0, myItems = [], pendingItem = null;
+
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
         "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100 },
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    Object.values(itemsConfig).forEach(i => { document.getElementById('case-preview').innerHTML += `<img src="${i.img}">`; });
+    // Функция инициализации
+    function initApp() {
+        MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+        MY_NAME = tg.initDataUnsafe.user?.username || tg.initDataUnsafe.user?.first_name || "Игрок";
+
+        if (!MY_ID) {
+            document.getElementById('error-screen').style.display = 'block';
+            return;
+        }
+
+        document.getElementById('game-content').style.visibility = 'visible';
+        document.getElementById('u-name').innerText = MY_NAME;
+        
+        // Рисуем превью кейса
+        const preview = document.getElementById('case-preview');
+        preview.innerHTML = '';
+        Object.values(itemsConfig).forEach(i => { 
+            preview.innerHTML += `<img src="${i.img}">`; 
+        });
+
+        loadData();
+    }
 
     async function loadData() {
         if (!MY_ID) return;
-        const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
-        const d = await r.json();
-        coins = d.balance; myItems = d.inventory || [];
-        document.getElementById('coins').innerText = coins;
+        try {
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
+            const d = await r.json();
+            coins = d.balance || 0; 
+            myItems = d.inventory || [];
+            document.getElementById('coins').innerText = coins;
+        } catch (e) {
+            console.error("Ошибка загрузки данных:", e);
+        }
     }
 
     function startRoulette() {
@@ -197,7 +219,9 @@
         el.classList.add('active');
         if(id==='inv') renderInv(); else if(id==='market') loadMarket(); else if(id==='top') loadTop();
     }
-    loadData();
+
+    // Запускаем инициализацию
+    initApp();
 </script>
 </body>
 </html>
