@@ -9,65 +9,87 @@
         :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.1); }
         body { background: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
         
-        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+        /* Верхняя панель */
+        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; z-index: 10; }
         .balance-box { background: var(--glass); padding: 10px 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); font-weight: bold; color: #00ff88; }
-        .inv-btn { background: var(--glass); border: 1px solid var(--primary); color: white; padding: 10px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+        
+        /* Нижнее меню */
+        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 20px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 25px; backdrop-filter: blur(15px); border: 1px solid var(--glass); z-index: 100; }
+        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.5; transition: 0.3s; }
+        .nav-item.active { opacity: 1; transform: scale(1.2); color: var(--primary); }
 
-        /* Динамические новости */
-        #update-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 200; }
-        .modal-content { background: linear-gradient(135deg, #1e2a3a, #000); padding: 25px; border-radius: 20px; border: 1px solid var(--primary); width: 85%; text-align: center; }
-        #news-text { text-align: left; font-size: 0.9rem; color: #ccc; margin: 15px 0; }
+        /* Экраны */
+        .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
+        .screen.active { display: flex; }
 
-        .case-scene { position: relative; margin-top: 60px; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
+        /* Сетки и карточки */
+        .inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-height: 65vh; overflow-y: auto; padding: 10px; }
+        .inv-card { background: var(--glass); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); text-align: center; font-size: 0.8rem; position: relative; }
+        .inv-card img { width: 60px; margin-bottom: 5px; }
+        
+        .sell-btn { background: #ff4444; border: none; color: white; padding: 6px; border-radius: 8px; margin-top: 5px; width: 100%; font-size: 0.7rem; font-weight: bold; cursor: pointer; }
+        .market-btn { background: var(--primary); }
+
+        /* Анимация кейса */
+        .case-scene { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
         .case-glow { position: absolute; width: 100%; height: 100%; background: var(--primary); filter: blur(60px); opacity: 0.3; border-radius: 50%; }
-        .case-img { width: 220px; z-index: 2; transition: transform 0.3s; }
+        .case-img { width: 200px; z-index: 2; }
         .spinning { animation: shake 0.5s infinite ease-in-out; }
-        @keyframes shake { 0% { transform: rotate(0); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
+        @keyframes shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } }
 
-        #inventory-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); backdrop-filter: blur(20px); display: none; flex-direction: column; align-items: center; z-index: 100; padding-top: 40px; }
-        .inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-height: 70vh; overflow-y: auto; padding: 10px; }
-        .inv-card { background: var(--glass); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); text-align: center; font-size: 0.8rem; }
+        .btn { background: linear-gradient(90deg, var(--primary), var(--accent)); border: none; padding: 15px 40px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
 
-        .btn { background: linear-gradient(90deg, var(--primary), var(--accent)); border: none; padding: 15px 40px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        /* Новости */
+        #update-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); display: none; align-items: center; justify-content: center; z-index: 200; }
     </style>
 </head>
 <body>
 
     <div id="update-modal">
-        <div class="modal-content">
-            <h2 id="news-title" style="color: var(--primary);">ЗАГРУЗКА...</h2>
-            <div id="news-text"></div>
+        <div class="modal-content" style="background: #1a1a2e; padding: 30px; border-radius: 20px; border: 1px solid var(--primary); text-align: center; width: 80%;">
+            <h2 id="news-title">ОБНОВЛЕНИЕ</h2>
+            <div id="news-text" style="margin: 15px 0; text-align: left;"></div>
             <button class="btn" onclick="closeModal()">ПОНЯТНО</button>
         </div>
     </div>
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">1000</span></div>
-        <button class="inv-btn" onclick="toggleInventory()">🎒</button>
+        <div style="font-weight: bold; letter-spacing: 2px;">NFT DELUXE</div>
     </div>
 
-    <div class="case-scene">
-        <div class="case-glow" id="glow"></div>
-        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" id="main-img" class="case-img">
+    <div id="screen-case" class="screen active">
+        <div class="case-scene">
+            <div class="case-glow"></div>
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" id="main-img" class="case-img">
+        </div>
+        <h2 id="status">КЕЙС ГОТОВ</h2>
+        <button class="btn" id="roll-btn" onclick="openCase()">ОТКРЫТЬ (50)</button>
     </div>
 
-    <h2 id="status">КЕЙС ГОТОВ</h2>
-    <button class="btn" id="roll-btn" onclick="openCase()">ОТКРЫТЬ (50)</button>
-
-    <div id="inventory-modal">
-        <h1>🎒 ИНВЕНТАРЬ</h1>
+    <div id="screen-inv" class="screen">
+        <h2 style="margin-top: 60px;">🎒 МОИ ВЕЩИ</h2>
         <div class="inv-grid" id="inv-grid"></div>
-        <button class="btn" onclick="toggleInventory()" style="background: #333;">НАЗАД</button>
+    </div>
+
+    <div id="screen-market" class="screen">
+        <h2 style="margin-top: 60px;">🛒 МАРКЕТПЛЕЙС</h2>
+        <div class="inv-grid" id="market-grid"></div>
+    </div>
+
+    <div class="nav-menu">
+        <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
+        <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
+        <div class="nav-item" onclick="showScreen('market', this)">🛒</div>
     </div>
 
     <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // 1. ДАННЫЕ
     let coins = parseInt(localStorage.getItem('coins')) || 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
-    let marketLots = JSON.parse(localStorage.getItem('marketLots')) || []; // В будущем это будет на сервере
+    let marketLots = JSON.parse(localStorage.getItem('marketLots')) || [];
 
     const itemsConfig = {
         "Common Bot": { price: 50, img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
@@ -82,129 +104,121 @@
         localStorage.setItem('marketLots', JSON.stringify(marketLots));
     }
 
-    function showScreen(screenId, el) {
+    function showScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('screen-' + screenId).classList.add('active');
+        document.getElementById('screen-' + id).classList.add('active');
         el.classList.add('active');
-        
-        if(screenId === 'inv') renderInv();
-        if(screenId === 'market') renderMarket();
+        if(id === 'inv') renderInv();
+        if(id === 'market') renderMarket();
     }
 
-    // --- ЛОГИКА ПРОДАЖИ ---
+    function openCase() {
+        if (coins < 50) { tg.showAlert("Недостаточно монет!"); return; }
+        coins -= 50; updateUI();
+        const btn = document.getElementById('roll-btn');
+        const img = document.getElementById('main-img');
+        const status = document.getElementById('status');
+        btn.disabled = true; img.classList.add('spinning');
+        status.innerText = "ОТКРЫВАЕМ...";
 
-    // 1. Продать боту (75% от номинала)
+        setTimeout(() => {
+            img.classList.remove('spinning');
+            const keys = Object.keys(itemsConfig);
+            const winName = keys[Math.floor(Math.random() * keys.length)];
+            const win = itemsConfig[winName];
+            img.src = win.img;
+            status.innerText = winName;
+            status.style.color = win.color;
+            myItems.push({ id: Date.now(), name: winName });
+            updateUI();
+            btn.disabled = false;
+            tg.HapticFeedback.notificationOccurred('success');
+        }, 2000);
+    }
+
     function sellToBot(id) {
         const idx = myItems.findIndex(i => i.id === id);
-        if(idx === -1) return;
-
-        const basePrice = itemsConfig[myItems[idx].name].price;
-        const sellPrice = Math.floor(basePrice * 0.75); // 75% цены
-
-        if(confirm(`Продать боту за ${sellPrice} монет? (Быстрый выкуп)`)) {
-            coins += sellPrice;
+        const item = myItems[idx];
+        const botPrice = Math.floor(itemsConfig[item.name].price * 0.75);
+        if(confirm(`Продать боту за ${botPrice}?`)) {
+            coins += botPrice;
             myItems.splice(idx, 1);
-            updateUI();
-            renderInv();
-            tg.HapticFeedback.notificationOccurred('success');
+            updateUI(); renderInv();
         }
     }
 
-    // 2. Выставить на маркет
     function listOnMarket(id) {
         const idx = myItems.findIndex(i => i.id === id);
-        if(idx === -1) return;
+        const item = myItems[idx];
+        const price = prompt("Ваша цена:", itemsConfig[item.name].price);
+        if(!price || isNaN(price) || price <= 0) return;
 
-        const userPrice = prompt("Введите вашу цену для маркета:", itemsConfig[myItems[idx].name].price);
-        if (!userPrice || isNaN(userPrice) || userPrice <= 0) {
-            tg.showAlert("Некорректная цена!");
-            return;
-        }
-
-        const item = myItems.splice(idx, 1)[0];
-        const lot = {
-            ...item,
-            marketPrice: parseInt(userPrice),
-            ownerId: tg.initDataUnsafe.user?.id || "local_user" // Сохраняем ID владельца
-        };
-
+        const lot = { ...item, marketPrice: parseInt(price), ownerId: tg.initDataUnsafe.user?.id || 123 };
         marketLots.push(lot);
-        updateUI();
-        renderInv();
-        tg.showAlert("Лот выставлен на маркет!");
+        myItems.splice(idx, 1);
+        updateUI(); renderInv();
+
+        tg.sendData(JSON.stringify({ action: "list_lot", lot: lot }));
     }
 
-    // 3. Снять с маркета
     function removeFromMarket(id) {
         const idx = marketLots.findIndex(l => l.id === id);
-        if(idx === -1) return;
-
-        const currentUserId = tg.initDataUnsafe.user?.id || "local_user";
+        if(marketLots[idx].ownerId != (tg.initDataUnsafe.user?.id || 123)) return;
         
-        // Проверка владельца
-        if(marketLots[idx].ownerId !== currentUserId) {
-            tg.showAlert("Это не ваш лот!");
-            return;
-        }
-
         const item = marketLots.splice(idx, 1)[0];
         delete item.marketPrice;
         myItems.push(item);
+        updateUI(); renderMarket();
         
-        updateUI();
-        renderMarket();
-        tg.showAlert("Предмет вернулся в инвентарь");
+        tg.sendData(JSON.stringify({ action: "remove_lot", id: id }));
     }
-
-    // --- ОТРИСОВКА ---
 
     function renderInv() {
         const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p>Инвентарь пуст</p>";
-        myItems.forEach(item => {
-            const config = itemsConfig[item.name];
-            const botPrice = Math.floor(config.price * 0.75);
+        grid.innerHTML = myItems.length ? "" : "Пусто";
+        myItems.forEach(i => {
+            const conf = itemsConfig[i.name];
             const card = document.createElement('div');
-            card.className = "inv-card";
-            card.style.borderColor = config.color;
-            card.innerHTML = `
-                <img src="${config.img}" style="width:50px;"><br>
-                <b>${item.name}</b><br>
-                <button class="sell-btn" onclick="sellToBot(${item.id})">БОТУ (+${botPrice})</button>
-                <button class="sell-btn" style="background:var(--primary)" onclick="listOnMarket(${item.id})">МАРКЕТ</button>
-            `;
+            card.className = 'inv-card';
+            card.style.borderColor = conf.color;
+            card.innerHTML = `<img src="${conf.img}"><br><b>${i.name}</b>
+                <button class="sell-btn" onclick="sellToBot(${i.id})">БОТУ (+${Math.floor(conf.price*0.75)})</button>
+                <button class="sell-btn market-btn" onclick="listOnMarket(${i.id})">МАРКЕТ</button>`;
             grid.appendChild(card);
         });
     }
 
     function renderMarket() {
-        const grid = document.getElementById('market-system-grid');
-        grid.innerHTML = marketLots.length ? "" : "<p>На маркете пока нет лотов</p>";
-        const currentUserId = tg.initDataUnsafe.user?.id || "local_user";
-
-        marketLots.forEach(lot => {
-            const config = itemsConfig[lot.name];
-            const isMine = lot.ownerId === currentUserId;
+        const grid = document.getElementById('market-grid');
+        grid.innerHTML = marketLots.length ? "" : "Лот нет";
+        const uid = tg.initDataUnsafe.user?.id || 123;
+        marketLots.forEach(l => {
+            const conf = itemsConfig[l.name];
             const card = document.createElement('div');
-            card.className = "inv-card";
-            card.style.borderColor = isMine ? "#00ff88" : config.color;
-            card.innerHTML = `
-                <img src="${config.img}" style="width:50px;"><br>
-                <small>${isMine ? "МОЙ ЛОТ" : "ПРОДАВЕЦ"}</small><br>
-                <b>${lot.name}</b><br>
-                <div style="color:#00ff88; margin:5px 0;">💰 ${lot.marketPrice}</div>
-                ${isMine ? 
-                    `<button class="sell-btn" onclick="removeFromMarket(${lot.id})">СНЯТЬ</button>` : 
-                    `<button class="sell-btn" style="background:#00d2ff">КУПИТЬ</button>`
-                }
-            `;
+            card.className = 'inv-card';
+            card.style.borderColor = l.ownerId == uid ? "#00ff88" : conf.color;
+            card.innerHTML = `<img src="${conf.img}"><br><b>${l.name}</b><br><span style="color:#00ff88">💰 ${l.marketPrice}</span>
+                ${l.ownerId == uid ? `<button class="sell-btn" onclick="removeFromMarket(${l.id})">СНЯТЬ</button>` : `<button class="sell-btn market-btn">КУПИТЬ</button>`}`;
             grid.appendChild(card);
         });
     }
 
-    // Остальные функции (openCase, checkNews и т.д.) остаются без изменений
+    async function checkNews() {
+        try {
+            const r = await fetch('news.json?v=' + Math.random());
+            const d = await r.json();
+            if(d.version !== localStorage.getItem('last_v')) {
+                document.getElementById('news-title').innerText = d.title;
+                document.getElementById('news-text').innerHTML = d.text;
+                document.getElementById('update-modal').style.display = 'flex';
+                localStorage.setItem('last_v', d.version);
+            }
+        } catch(e) {}
+    }
+
+    function closeModal() { document.getElementById('update-modal').style.display = 'none'; }
+    updateUI(); checkNews();
 </script>
 </body>
 </html>
-
