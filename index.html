@@ -93,120 +93,47 @@ body{
 </div>
 
 <script>
-const tg = window.Telegram.WebApp;
-tg.expand();
-if(!tg.initDataUnsafe.user){
- document.body.innerHTML="<h2>Откройте через Telegram</h2>";
- throw "NOT TG";
+document.addEventListener("DOMContentLoaded", () => {
+
+  if (!window.Telegram || !window.Telegram.WebApp) {
+    document.body.innerHTML = "<h2>Откройте через Telegram</h2>";
+    return;
+  }
+
+  const tg = window.Telegram.WebApp;
+  tg.ready();      // 🔥 ОБЯЗАТЕЛЬНО
+  tg.expand();
+
+  // ждём initData
+  let tries = 0;
+  const waitUser = setInterval(() => {
+    tries++;
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      clearInterval(waitUser);
+      initGame(tg);
+    }
+    if (tries > 20) {
+      clearInterval(waitUser);
+      document.body.innerHTML = "<h2>Ошибка Telegram WebApp</h2>";
+    }
+  }, 100);
+});
+
+function initGame(tg) {
+  // ⬇⬇⬇ ВЕСЬ ТВОЙ КОД ПЕРЕНОСИМ СЮДА ⬇⬇⬇
+
+  const SERVER="https://24ddd5548d384c5e-92-63-106-58.serveousercontent.com";
+  const MY_ID = String(tg.initDataUnsafe.user.id);
+  const MY_NAME = tg.initDataUnsafe.user.first_name;
+
+  window.MY_ID = MY_ID;
+  window.MY_NAME = MY_NAME;
+
+  load();
 }
-
-const SERVER="https://24ddd5548d384c5e-92-63-106-58.serveousercontent.com";
-const MY_ID=String(tg.initDataUnsafe.user.id);
-const MY_NAME=tg.initDataUnsafe.user.first_name;
-
-const items={
- "Common Bot":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712139.png",price:20},
- "Rare Cyber":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712109.png",price:100},
- "Ultra Legend":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712095.png",price:500},
- "Gold Dragon":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712102.png",price:1500}
-};
-
-let coins=0,myInv=[];
-
-async function api(data){
- return fetch(SERVER,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)}).then(r=>r.json());
-}
-async function load(){
- const r=await fetch(`${SERVER}?user_id=${MY_ID}`);
- const d=await r.json();
- coins=d.balance;myInv=d.inventory;
- coinsEl.innerText=coins;
-}
-
-function openCasePreview(){
- caseItems.innerHTML="";
- Object.keys(items).forEach(i=>{
-  caseItems.innerHTML+=`<div>${i} — ${items[i].price}💰</div>`;
- });
- casePreview.style.display="flex";
-}
-function closePreview(){casePreview.style.display="none";}
-
-async function openCase(){
- if(coins<50)return;
- await api({action:"open_case",user_id:MY_ID});
- const keys=Object.keys(items);
- const win=keys[Math.floor(Math.random()*keys.length)];
- await api({action:"add_item",user_id:MY_ID,item:win});
- load();
- alert("Выпало: "+win);
-}
-
-function renderInv(){
- invGrid.innerHTML=myInv.length?"":"<p>ПУСТО</p>";
- myInv.forEach((it,i)=>{
-  invGrid.innerHTML+=`
-   <div class="card">
-    <img src="${items[it.name].img}">
-    <div class="small">${it.name}</div>
-    <button class="small" onclick="sellBot(${i})">БОТУ</button>
-    <button class="small" onclick="listMarket(${i})">МАРКЕТ</button>
-   </div>`;
- });
-}
-
-async function sellBot(i){
- const it=myInv[i];
- await api({action:"sell_bot",user_id:MY_ID,item_id:it.id,
-  gain:Math.floor(items[it.name].price*.75)});
- load();renderInv();
-}
-
-async function listMarket(i){
- const p=prompt("Цена");
- if(!p)return;
- const it=myInv[i];
- await api({action:"list_market",user_id:MY_ID,name:MY_NAME,item:it.name,item_id:it.id,price:+p});
- load();renderInv();
-}
-
-async function loadMarket(){
- const r=await fetch(`${SERVER}?action=market`);
- const d=await r.json();
- marketList.innerHTML="";
- d.forEach(l=>{
-  marketList.innerHTML+=`
-   <div class="item">
-    <span>${l.item} (${l.price}💰)</span>
-    ${l.sid===MY_ID
-     ?`<button onclick="cancelLot(${l.slot})">СНЯТЬ</button>`
-     :`<button onclick="buy(${l.slot})">КУПИТЬ</button>`}
-   </div>`;
- });
-}
-
-async function buy(s){await api({action:"buy",user_id:MY_ID,slot:s});load();loadMarket();}
-async function cancelLot(s){await api({action:"cancel_lot",user_id:MY_ID,slot:s});loadMarket();}
-
-async function loadTop(){
- const r=await fetch(`${SERVER}?action=top`);
- const d=await r.json();
- topList.innerHTML="";
- d.forEach((p,i)=>topList.innerHTML+=`<div class="item">#${i+1} ${p.u} — ${p.b}💰</div>`);
-}
-
-function show(id,el){
- document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
- document.querySelectorAll(".nav div").forEach(n=>n.classList.remove("active"));
- document.getElementById(id).classList.add("active");
- el.classList.add("active");
- if(id==="inv")renderInv();
- if(id==="market")loadMarket();
- if(id==="top")loadTop();
-}
-
-load();
 </script>
+
 </body>
 </html>
+
 
