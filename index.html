@@ -3,155 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Case Deluxe</title>
+    <title>NFT Deluxe Case</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
             --primary: #00d2ff;
             --accent: #9d50bb;
             --bg: #050505;
+            --glass: rgba(255, 255, 255, 0.1);
         }
 
         body {
-            background: var(--bg);
             background: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%);
-            color: white;
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
+            color: white; font-family: 'Segoe UI', sans-serif;
+            margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden;
         }
 
-        /* Анимация появления контента */
-        .fade-in { animation: fadeIn 0.8s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Окно обновлений */
-        #update-modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
-            display: flex; align-items: center; justify-content: center; z-index: 100;
-        }
-        .modal-content {
-            background: linear-gradient(135deg, #2c3e50, #000);
-            padding: 30px; border-radius: 24px; border: 1px solid var(--primary);
-            width: 80%; text-align: center;
+        /* Шапка с кнопками */
+        .top-bar {
+            width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
         }
 
-        /* Баланс */
-        .balance-card {
-            margin-top: 20px; padding: 10px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 50px; border: 1px solid rgba(255,255,255,0.1);
-            font-weight: bold; color: #00ff88;
-        }
+        .balance-box { background: var(--glass); padding: 10px 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); font-weight: bold; color: #00ff88; }
 
-        /* Рулетка / Кейс */
+        .inv-btn { background: var(--glass); border: 1px solid var(--primary); color: white; padding: 10px; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+
+        /* Сцена с кейсом */
         .case-scene {
-            position: relative; margin-top: 50px;
-            width: 250px; height: 250px;
+            position: relative; margin-top: 60px; width: 260px; height: 260px;
             display: flex; align-items: center; justify-content: center;
         }
-        .glow {
+
+        .case-glow {
             position: absolute; width: 100%; height: 100%;
-            background: var(--primary); filter: blur(80px); opacity: 0.2;
-            border-radius: 50%;
-        }
-        .nft-display {
-            width: 200px; height: 200px; object-fit: contain;
-            z-index: 2; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            background: var(--primary); filter: blur(60px); opacity: 0.3; border-radius: 50%;
         }
 
-        /* Эффект прокрутки */
-        .spinning { animation: spin 0.2s infinite linear; }
-        @keyframes spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(180deg); } }
-
-        /* Кнопка */
-        .main-btn {
-            margin-top: 40px; background: linear-gradient(90deg, var(--primary), var(--accent));
-            border: none; padding: 18px 50px; border-radius: 15px;
-            color: white; font-weight: 800; font-size: 1.1rem;
-            box-shadow: 0 10px 20px rgba(0, 210, 255, 0.3); cursor: pointer;
+        .case-img {
+            width: 220px; z-index: 2; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
+
+        .spinning { animation: shake 0.5s infinite ease-in-out; }
+        @keyframes shake { 0% { transform: rotate(0); } 25% { transform: rotate(5deg); } 75% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
+
+        /* Кнопка открытия */
+        .open-btn {
+            margin-top: 50px; background: linear-gradient(90deg, var(--primary), var(--accent));
+            border: none; padding: 18px 60px; border-radius: 20px;
+            color: white; font-weight: bold; font-size: 1.2rem; box-shadow: 0 10px 25px rgba(0, 210, 255, 0.4);
+        }
+
+        /* Окно Инвентаря */
+        #inventory-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(15px);
+            display: none; flex-direction: column; align-items: center; z-index: 100;
+        }
+
+        .inv-content { width: 90%; margin-top: 50px; text-align: center; }
+        .inv-list { 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; 
+            max-height: 60vh; overflow-y: auto; margin-top: 20px; padding: 10px;
+        }
+        .inv-item { background: var(--glass); padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.9rem; }
     </style>
 </head>
-<body class="fade-in">
+<body>
 
-    <div id="update-modal">
-        <div class="modal-content">
-            <h2>🚀 ОБНОВЛЕНИЕ 1.1</h2>
-            <ul style="text-align: left; line-height: 1.6;">
-                <li>💎 Добавлена система NFT Кейсов</li>
-                <li>🎨 Новый детализированный UI</li>
-                <li>⚡️ Улучшена плавность анимаций</li>
-                <li>💾 Авто-сохранение в базу бота</li>
-            </ul>
-            <button class="main-btn" onclick="closeModal()">ПОЕХАЛИ!</button>
-        </div>
+    <div class="top-bar">
+        <div class="balance-box">💰 <span id="coins">1000</span></div>
+        <button class="inv-btn" onclick="toggleInventory()">🎒</button>
     </div>
-
-    <div class="balance-card">💰 <span id="coins">1000</span> COINS</div>
 
     <div class="case-scene">
-        <div class="glow" id="glow-effect"></div>
-        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" id="nft-img" class="nft-display">
+        <div class="case-glow" id="glow"></div>
+        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" id="main-img" class="case-img">
     </div>
 
-    <h2 id="nft-name" style="margin-top: 20px; text-shadow: 0 0 10px rgba(255,255,255,0.5);">ГОТОВ К ПРОКРУТКЕ?</h2>
+    <h2 id="status" style="margin-top: 30px; text-transform: uppercase; letter-spacing: 2px;">NFT CASE #1</h2>
 
-    <button class="main-btn" id="roll-btn" onclick="startRoll()">ОТКРЫТЬ КЕЙС</button>
+    <button class="open-btn" id="roll-btn" onclick="openCase()">ОТКРЫТЬ</button>
+    <p style="color: #666; margin-top: 15px;">Цена: 50 монет</p>
+
+    <div id="inventory-modal">
+        <div class="inv-content">
+            <h1>🎒 Твой Инвентарь</h1>
+            <div class="inv-list" id="inv-list">
+                </div>
+            <button class="open-btn" onclick="toggleInventory()" style="background: #444; margin-top: 30px;">НАЗАД</button>
+            <button class="open-btn" onclick="saveToBot()" style="background: #28a745;">💾 СОХРАНИТЬ В БОТА</button>
+        </div>
+    </div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
 
-        const nfts = [
-            { name: "COMMON BOT", img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
-            { name: "RARE CYBER", img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#9d50bb" },
-            { name: "ULTRA LEGEND", img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#ffcc00" }
+        let coins = 1000;
+        let myItems = [];
+
+        const items = [
+            { name: "Common Card", img: "https://cdn-icons-png.flaticon.com/512/9306/9306630.png", color: "#00d2ff" },
+            { name: "Rare Cyber NFT", img: "https://cdn-icons-png.flaticon.com/512/9306/9306622.png", color: "#9d50bb" },
+            { name: "Legendary Ape", img: "https://cdn-icons-png.flaticon.com/512/9306/9306614.png", color: "#ffcc00" }
         ];
 
-        function closeModal() {
-            document.getElementById('update-modal').style.display = 'none';
-            tg.HapticFeedback.impactOccurred('light');
-        }
+        function openCase() {
+            if (coins < 50) {
+                tg.showAlert("Недостаточно монет!");
+                return;
+            }
 
-        function startRoll() {
+            coins -= 50;
+            document.getElementById('coins').innerText = coins;
+            
             const btn = document.getElementById('roll-btn');
-            const img = document.getElementById('nft-img');
-            const name = document.getElementById('nft-name');
-            const glow = document.getElementById('glow-effect');
+            const img = document.getElementById('main-img');
+            const status = document.getElementById('status');
+            const glow = document.getElementById('glow');
 
             btn.disabled = true;
             img.classList.add('spinning');
-            name.innerText = "КРУТИМ...";
-            
-            tg.HapticFeedback.notificationOccurred('warning');
+            status.innerText = "Открываем...";
+            tg.HapticFeedback.impactOccurred('medium');
 
-            // Имитация прокрутки 2.5 секунды
             setTimeout(() => {
                 img.classList.remove('spinning');
-                const win = nfts[Math.floor(Math.random() * nfts.length)];
+                const win = items[Math.floor(Math.random() * items.length)];
                 
-                img.src = win.img;
-                name.innerText = win.name;
-                name.style.color = win.color;
+                img.src = win.img; // Показываем выпавшую NFT
+                status.innerText = win.name;
+                status.style.color = win.color;
                 glow.style.background = win.color;
-                glow.style.opacity = "0.6";
+                glow.style.opacity = "0.7";
+
+                myItems.push(win.name);
+                updateInventoryUI();
                 
                 btn.disabled = false;
                 tg.HapticFeedback.notificationOccurred('success');
-                
-                // Через 2 секунды предлагаем сохранить
+
+                // Через 3 секунды возвращаем картинку кейса
                 setTimeout(() => {
-                    if(confirm(`Выбили ${win.name}! Сохранить в инвентарь?`)) {
-                        tg.sendData(`ВЫБИТО: ${win.name}`);
-                    }
-                }, 500);
-            }, 2500);
+                    img.src = "https://cdn-icons-png.flaticon.com/512/6161/6161301.png";
+                    status.innerText = "NFT CASE #1";
+                    status.style.color = "white";
+                    glow.style.background = "var(--primary)";
+                    glow.style.opacity = "0.3";
+                }, 3000);
+
+            }, 2000);
+        }
+
+        function toggleInventory() {
+            const modal = document.getElementById('inventory-modal');
+            modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+            tg.HapticFeedback.impactOccurred('light');
+        }
+
+        function updateInventoryUI() {
+            const list = document.getElementById('inv-list');
+            list.innerHTML = "";
+            myItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "inv-item";
+                div.innerText = item;
+                list.appendChild(div);
+            });
+        }
+
+        function saveToBot() {
+            if (myItems.length === 0) {
+                tg.showAlert("Инвентарь пуст!");
+                return;
+            }
+            // Отправляем весь список боту
+            tg.sendData("Инвентарь: " + myItems.join(", "));
         }
     </script>
 </body>
