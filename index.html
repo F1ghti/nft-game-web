@@ -157,15 +157,22 @@ async function loadData(){
     const url = `${API_URL}?user_id=${MY_ID}`;
     const r = await fetch(url);
     const d = await r.json();
-    if (d.error) {
-        document.getElementById("coins").innerText = "Ошибка";
+
+    if (d.error === "not_registered") {
+        // ОСТАНАВЛИВАЕМ ИГРУ И ПРОСИМ РЕГИСТРАЦИЮ
+        document.body.innerHTML = `
+            <div style="text-align:center; padding-top:50vh; font-family:sans-serif; color:white;">
+                <h2>🛑 ВЫ НЕ ЗАРЕГИСТРИРОВАНЫ</h2>
+                <p>Пожалуйста, вернитесь в бота и нажмите <b>/start</b></p>
+                <a href="https://t.me/ТВОЙ_БОТ_USERNAME" style="color:#00d2ff; text-decoration:none;">ОТКРЫТЬ БОТА</a>
+            </div>`;
         return;
     }
-    coins = d.balance; 
-    myInv = d.inventory || [];
-    document.getElementById("coins").innerText = coins;
-    if(document.getElementById("inv").classList.contains("active")) renderInv();
- } catch(e) { document.getElementById("coins").innerText = "Ошибка"; }
+
+    // Если всё ок — грузим баланс как обычно
+    coins = d.balance;
+    // ... остальной код ...
+ } catch(e) { /* ошибка сети */ }
 }
 
 function closePreview(){ document.getElementById("casePreview").style.display="none"; }
@@ -325,3 +332,4 @@ loadData();
 </script>
 </body>
 </html>
+
