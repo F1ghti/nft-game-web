@@ -6,86 +6,23 @@
     <title>NFT Tycoon</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg: #050505; --glass: rgba(255, 255, 255, .06);
-            --primary: #00d2ff; --accent: #9d50bb; --green: #00ff88;
-        }
-        body {
-            margin: 0; background: radial-gradient(circle, #1a1a2e, #050505);
-            color: #fff; font-family: 'Segoe UI', sans-serif;
-            display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden;
-        }
-        .top { margin-top: 20px; display: flex; justify-content: space-between; width: 90%; z-index: 10; }
-        .balance { background: var(--glass); padding: 8px 16px; border-radius: 20px; color: var(--green); font-weight: 800; border: 1px solid rgba(0,255,136,0.2); }
-        .screen { display: none; flex-direction: column; align-items: center; width: 100%; height: 100%; padding-bottom: 90px; position: absolute; top: 0; }
-        .screen.active { display: flex; }
-        .btn { padding: 14px 30px; border: none; border-radius: 18px; background: linear-gradient(135deg, var(--primary), var(--accent)); color: #fff; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3); }
-        .btn:disabled { opacity: 0.5; filter: grayscale(1); }
-        .nav { position: fixed; bottom: 20px; background: rgba(0, 0, 0, .8); padding: 12px 30px; border-radius: 30px; display: flex; gap: 30px; z-index: 100; border: 1px solid rgba(255,255,255,0.1); }
-        .nav div { font-size: 1.5rem; opacity: .3; cursor: pointer; transition: 0.3s; }
-        .nav .active { opacity: 1; color: var(--primary); transform: scale(1.2); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; margin-top: 80px; max-height: 60vh; overflow-y: auto; }
-        .card { background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .card img { width: 50px; margin-bottom: 10px; }
-        .small-btn { font-size: .65rem; padding: 4px 8px; margin-top: 5px; background: rgba(255, 255, 255, 0.1); border: 1px solid var(--primary); color: white; border-radius: 5px; }
-        .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .95); display: none; align-items: center; justify-content: center; z-index: 5000; }
-        .popup { background: #111; padding: 25px; border-radius: 30px; text-align: center; border: 1px solid var(--primary); }
-        .list { width: 90%; margin-top: 80px; max-height: 60vh; overflow-y: auto; }
-        .item { display: flex; justify-content: space-between; align-items: center; background: var(--glass); padding: 12px; border-radius: 15px; margin-bottom: 8px; }
-
-        /* РУЛЕТКА */
-        .roulette-container { position: relative; width: 100%; height: 140px; background: rgba(255,255,255,0.03); border-top: 2px solid var(--primary); border-bottom: 2px solid var(--primary); margin-top: 100px; overflow: hidden; display: none; }
-        .roulette-track { display: flex; position: absolute; left: 0; top: 0; height: 100%; }
-        .roulette-item { width: 120px; height: 100%; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.05); }
-        .roulette-item img { width: 60px; height: 60px; }
-        .pointer { position: absolute; left: 50%; top: 0; width: 4px; height: 100%; background: var(--green); z-index: 10; box-shadow: 0 0 15px var(--green); transform: translateX(-50%); }
+        :root { --bg:#050505; --primary:#00d2ff; --green:#00ff88; }
+        body { margin:0; background:#050505; color:#fff; font-family:sans-serif; display:flex; flex-direction:column; align-items:center; height:100vh; }
+        .balance { margin-top:20px; background:rgba(255,255,255,0.1); padding:10px 20px; border-radius:20px; color:var(--green); }
+        .btn { margin-top:20px; padding:15px 30px; background:var(--primary); border:none; border-radius:15px; color:#000; font-weight:bold; }
+        #debug-info { font-size: 10px; color: gray; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div class="top">
-    <div class="balance">💰 <span id="coins">...</span></div>
-    <div style="font-weight:900; font-size:.7rem; color:var(--primary)">NFT TYCOON</div>
-</div>
+<div class="balance">💰 <span id="coins">...</span></div>
+<div id="debug-info">Инициализация...</div>
 
-<div id="case" class="screen active">
-    <div id="roulette" class="roulette-container">
-        <div class="pointer"></div>
-        <div id="track" class="roulette-track"></div>
-    </div>
-    <img id="caseStaticImg" src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180" style="margin-top:100px; cursor:pointer" onclick="openCasePreview()">
-    <h3 id="status" style="text-shadow: 0 0 10px var(--primary);">КЕЙС ГОТОВ</h3>
-    <button id="openBtn" class="btn" onclick="openCase()">ОТКРЫТЬ (50)</button>
-</div>
-
-<div id="inv" class="screen">
-    <h2 style="margin-top:60px">🎒 ИНВЕНТАРЬ</h2>
-    <div class="grid" id="invGrid"></div>
-</div>
-
-<div id="market" class="screen">
-    <h2 style="margin-top:60px">⚖️ МАРКЕТ</h2>
-    <div class="list" id="marketList"></div>
-</div>
-
-<div id="top" class="screen">
-    <h2 style="margin-top:60px">🏆 ТОП ИГРОКОВ</h2>
-    <div class="list" id="topList"></div>
-</div>
-
-<div id="casePreview" class="overlay">
-    <div class="popup">
-        <h3>ВНУТРИ КЕЙСА:</h3>
-        <div id="caseItems" style="margin-bottom:20px; text-align:left;"></div>
-        <button class="btn" onclick="closePreview()">ЗАКРЫТЬ</button>
-    </div>
-</div>
-
-<div class="nav">
-    <div class="active" onclick="show('case',this)">📦</div>
-    <div onclick="show('inv',this)">🎒</div>
-    <div onclick="show('market',this)">⚖️</div>
-    <div onclick="show('top',this)">🏆</div>
+<div id="game-content" style="display:none; text-align:center;">
+    <h2 style="margin-top:50px;">NFT Tycoon</h2>
+    <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="150">
+    <br>
+    <button class="btn" onclick="openCase()">ОТКРЫТЬ КЕЙС (50)</button>
 </div>
 
 <script>
@@ -93,154 +30,58 @@
     tg.ready();
     tg.expand();
 
-    // ССЫЛКА НА СЕРВЕР (ОБЯЗАТЕЛЬНО ПРОВЕРЯЙ ЕЁ ПОСЛЕ ПЕРЕЗАПУСКА SERVEO)
+    // Ссылка на сервер (ПЕРЕПРОВЕРЬ ЕЁ!)
     const SERVER_URL = "https://41ce26c1ca617b9a-92-63-106-58.serveousercontent.com";
     const API_URL = SERVER_URL + "/api";
 
-    // ПРОВЕРКА АВТОРИЗАЦИИ
-    const MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-    const MY_NAME = tg.initDataUnsafe?.user?.first_name || "Guest";
+    function startApp() {
+        const user = tg.initDataUnsafe?.user;
+        const debug = document.getElementById("debug-info");
 
-    if (!MY_ID) {
-        document.body.innerHTML = `
-            <div style="text-align:center; padding:50px; margin-top:100px;">
-                <h2 style="color:red">🛑 ОШИБКА ДОСТУПА</h2>
-                <p>Зайдите в игру через кнопку в вашем боте.</p>
-            </div>`;
-        throw new Error("No Telegram ID found");
+        if (!user) {
+            debug.innerText = "Ошибка: Telegram не передал данные пользователя.";
+            // Временная мера: если ID нет, попробуем всё равно загрузить для теста
+            // Но в реальности тут должна быть ошибка
+            return;
+        }
+
+        const MY_ID = String(user.id);
+        debug.innerText = "Авторизован как ID: " + MY_ID;
+        document.getElementById("game-content").style.display = "block";
+
+        loadData(MY_ID);
     }
 
-    const itemData = {
-        "Common Bot": {img:"https://cdn-icons-png.flaticon.com/512/4712/4712139.png", price:20},
-        "Rare Cyber": {img:"https://cdn-icons-png.flaticon.com/512/4712/4712109.png", price:100},
-        "Ultra Legend": {img:"https://cdn-icons-png.flaticon.com/512/4712/4712095.png", price:500},
-        "Gold Dragon": {img:"https://cdn-icons-png.flaticon.com/512/4712/4712102.png", price:1500}
-    };
-
-    let coins = 0, myInv = [], isSpinning = false;
-
-    // ФУНКЦИЯ ЗАГРУЗКИ ДАННЫХ
-    async function loadData() {
+    async function loadData(uid) {
         try {
-            const r = await fetch(`${API_URL}?user_id=${MY_ID}`);
+            const r = await fetch(`${API_URL}?user_id=${uid}`);
             const d = await r.json();
-
-            if (d.error === "not_registered") {
-                document.body.innerHTML = `
-                    <div style="text-align:center; padding:50px; margin-top:100px;">
-                        <h2>📱 НУЖНА ВЕРИФИКАЦИЯ</h2>
-                        <p>Подтвердите номер телефона в боте!</p>
-                        <button class="btn" onclick="window.location.reload()">Я ПОДТВЕРДИЛ</button>
-                    </div>`;
+            
+            if(d.error === "not_registered") {
+                document.body.innerHTML = "<h2>Нужна верификация в боте!</h2>";
                 return;
             }
-
-            coins = d.balance;
-            myInv = d.inventory || [];
-            document.getElementById("coins").innerText = coins;
-            renderInv();
-        } catch (e) {
-            console.error(e);
-            document.getElementById("status").innerText = "ОШИБКА СЕРВЕРА";
+            
+            document.getElementById("coins").innerText = d.balance;
+        } catch(e) {
+            document.getElementById("debug-info").innerText = "Ошибка связи с сервером";
         }
     }
 
-    // ОТРИСОВКА ИНВЕНТАРЯ
-    function renderInv() {
-        const grid = document.getElementById("invGrid");
-        grid.innerHTML = myInv.length ? "" : "<p style='grid-column:1/3'>ПУСТО</p>";
-        myInv.forEach((it, i) => {
-            grid.innerHTML += `
-                <div class="card">
-                    <img src="${itemData[it.name]?.img || ''}">
-                    <div style="font-size:0.7rem">${it.name}</div>
-                    <button class="small-btn" onclick="sellBot(${it.id}, '${it.name}')">ПРОДАТЬ</button>
-                </div>`;
-        });
-    }
-
-    // ПРОДАЖА БОТУ
-    async function sellBot(itemId, itemName) {
-        const gain = Math.floor(itemData[itemName].price * 0.7);
+    async function openCase() {
+        const user = tg.initDataUnsafe?.user;
+        if (!user) return;
+        
         await fetch(API_URL, {
             method: "POST",
-            body: JSON.stringify({ action: "sell_bot", user_id: MY_ID, item_id: itemId, gain: gain })
+            body: JSON.stringify({ action: "open_case", user_id: String(user.id) })
         });
-        loadData();
+        loadData(String(user.id));
     }
 
-    // ОТКРЫТИЕ КЕЙСА
-    async function openCase() {
-        if (isSpinning || coins < 50) return;
-        isSpinning = true;
-        
-        const res = await fetch(API_URL, {
-            method: "POST",
-            body: JSON.stringify({ action: "open_case", user_id: MY_ID })
-        }).then(r => r.json());
+    // Запускаем с небольшой задержкой, чтобы Telegram успел прокинуть данные
+    setTimeout(startApp, 500);
 
-        if (res.error) { alert("Ошибка!"); isSpinning = false; return; }
-
-        const keys = Object.keys(itemData);
-        const win = keys[Math.floor(Math.random() * keys.length)];
-
-        // Анимация рулетки
-        const track = document.getElementById("track");
-        const roulette = document.getElementById("roulette");
-        const staticImg = document.getElementById("caseStaticImg");
-        
-        staticImg.style.display = "none";
-        roulette.style.display = "block";
-        track.style.transition = "none";
-        track.style.transform = "translateX(0)";
-        track.innerHTML = "";
-
-        for (let i = 0; i < 60; i++) {
-            const name = (i === 55) ? win : keys[Math.floor(Math.random() * keys.length)];
-            track.innerHTML += `<div class="roulette-item"><img src="${itemData[name].img}"><span>${name}</span></div>`;
-        }
-
-        setTimeout(() => {
-            const targetPos = (55 * 120) + 60 - (roulette.offsetWidth / 2);
-            track.style.transition = "transform 5s cubic-bezier(0.15, 0, 0.15, 1)";
-            track.style.transform = `translateX(-${targetPos}px)`;
-        }, 50);
-
-        setTimeout(async () => {
-            await fetch(API_URL, { method: "POST", body: JSON.stringify({ action: "add_item", user_id: MY_ID, item: win }) });
-            alert("Выпало: " + win);
-            isSpinning = false;
-            staticImg.style.display = "block";
-            roulette.style.display = "none";
-            loadData();
-        }, 5500);
-    }
-
-    // ПЕРЕКЛЮЧЕНИЕ ЭКРАНОВ
-    function show(id, el) {
-        document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-        document.querySelectorAll(".nav div").forEach(n => n.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
-        el.classList.add("active");
-        if (id === "top") loadTop();
-    }
-
-    async function loadTop() {
-        const r = await fetch(`${API_URL}?action=top`).then(r => r.json());
-        const list = document.getElementById("topList");
-        list.innerHTML = r.map((p, i) => `<div class="item"><span>#${i+1} ${p.u}</span><b>${p.b}💰</b></div>`).join('');
-    }
-
-    function openCasePreview() {
-        const box = document.getElementById("caseItems");
-        box.innerHTML = Object.keys(itemData).map(k => `<div><img src="${itemData[k].img}" width="20"> ${k}</div>`).join('');
-        document.getElementById("casePreview").style.display = "flex";
-    }
-    function closePreview() { document.getElementById("casePreview").style.display = "none"; }
-
-    // ЗАПУСК
-    loadData();
 </script>
-
 </body>
 </html>
