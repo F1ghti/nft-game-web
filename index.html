@@ -6,65 +6,67 @@
     <title>NFT Tycoon P2P</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.05); }
-        body { background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.07); }
+        body { background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         
         .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; z-index: 10; }
-        .balance-box { background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88; }
+        .balance-box { background: var(--glass); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-weight: bold; }
 
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
 
-        /* РУЛЕТКА */
-        .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
-        .roulette-line { display: flex; position: absolute; left: 0; top: 10px; will-change: transform; transition: transform 5s cubic-bezier(0.1, 0, 0, 1); }
+        .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-y: 1px solid var(--primary); }
+        .roulette-line { display: flex; position: absolute; left: 0; will-change: transform; transition: transform 5s cubic-bezier(0.1, 0, 0, 1); }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
         .roulette-item img { width: 70px; }
-        .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; box-shadow: 0 0 10px #ff4444; }
+        .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; }
+
+        .case-preview { display: flex; gap: 10px; margin-top: 20px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 15px; }
+        .case-preview img { width: 40px; opacity: 0.7; }
 
         .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         .inv-card img { width: 50px; }
         
-        .market-lot { background: var(--glass); padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--primary); }
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
+        .market-lot { background: var(--glass); padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; }
 
-        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid var(--glass); z-index: 100; }
-        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
-        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.1); }
+        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; border: 1px solid var(--glass); }
+        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.3; }
+        .nav-item.active { opacity: 1; color: var(--primary); }
 
-        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
+        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div id="user-name" style="font-size: 0.7rem; opacity: 0.6;">...</div>
+        <div id="u-name" style="font-size: 0.8rem; font-weight: bold;">Загрузка...</div>
     </div>
 
     <div id="screen-case" class="screen active">
-        <div id="case-ui" style="text-align: center;">
-            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="150">
-            <p style="opacity: 0.5;">КЕЙС РОБОТОВ</p>
+        <div id="case-main">
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="130">
+            <div class="case-preview" id="case-items-list"></div>
         </div>
         <div class="roulette-wrapper" id="roulette-box">
             <div class="roulette-marker"></div>
             <div class="roulette-line" id="roulette-line"></div>
         </div>
-        <button class="btn" id="roll-btn" onclick="startRoulette()" style="margin-top: 20px;">ОТКРЫТЬ (50)</button>
+        <button class="btn" id="roll-btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
     </div>
 
     <div id="screen-inv" class="screen"><h2>🎒 ИНВЕНТАРЬ</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
     <div id="screen-market" class="screen"><h2>⚖️ РЫНОК</h2><div class="scroll-area" id="market-list"></div></div>
-    <div id="screen-top" class="screen"><h2>🏆 ТОП ИГРОКОВ</h2><div class="scroll-area" id="top-list"></div></div>
+    <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
 
     <div id="win-overlay" class="win-overlay">
         <h2 style="color: gold;">ВЫПАЛО!</h2>
         <img id="win-img" src="" width="150">
         <h3 id="win-name"></h3>
-        <button class="btn" onclick="collectItem()" style="background: #00ff88; color: black;">ЗАБРАТЬ</button>
+        <button class="btn" onclick="collectItem()" style="background:#00ff88; color:black;">ЗАБРАТЬ</button>
     </div>
 
     <div class="nav-menu">
@@ -78,10 +80,10 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
-    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest_test';
+    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest';
     const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
-    document.getElementById('user-name').innerText = MY_NAME;
+    document.getElementById('u-name').innerText = MY_NAME;
 
     let coins = 0, myItems = [], pendingItem = null;
     const itemsConfig = {
@@ -90,11 +92,17 @@
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    async function loadData() {
-        const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
-        const d = await r.json();
-        coins = d.balance; myItems = d.inventory || [];
-        document.getElementById('coins').innerText = coins;
+    // Показываем содержимое кейса сразу
+    const preview = document.getElementById('case-items-list');
+    Object.values(itemsConfig).forEach(i => { preview.innerHTML += `<img src="${i.img}">`; });
+
+    async function load() {
+        try {
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
+            const d = await r.json();
+            coins = d.balance; myItems = d.inventory || [];
+            document.getElementById('coins').innerText = coins;
+        } catch(e) { console.log("Ошибка сети"); }
     }
 
     function startRoulette() {
@@ -102,28 +110,21 @@
         coins -= 50; document.getElementById('coins').innerText = coins;
         
         const line = document.getElementById('roulette-line');
-        document.getElementById('case-ui').style.display = 'none';
+        document.getElementById('case-main').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'block';
         
-        line.innerHTML = '';
-        line.style.transition = 'none';
-        line.style.transform = 'translateX(0)';
-        
-        const keys = Object.keys(itemsConfig);
-        const tape = [];
+        line.innerHTML = ''; line.style.transition = 'none'; line.style.transform = 'translateX(0)';
+        const keys = Object.keys(itemsConfig), tape = [];
         for(let i=0; i<60; i++) {
             let k = keys[Math.floor(Math.random()*keys.length)];
             tape.push(k);
-            line.innerHTML += `<div class="roulette-item" style="border-bottom: 4px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
+            line.innerHTML += `<div class="roulette-item" style="border-bottom:4px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
         }
-        
         pendingItem = tape[45];
-        
         setTimeout(() => {
             line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
             line.style.transform = `translateX(-${45*130 - window.innerWidth/2 + 65}px)`;
         }, 50);
-
         setTimeout(() => {
             document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
@@ -137,63 +138,54 @@
         });
         document.getElementById('win-overlay').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'none';
-        document.getElementById('case-ui').style.display = 'block';
-        loadData();
+        document.getElementById('case-main').style.display = 'block';
+        load();
     }
 
-    async function sellToBot(id, name) {
-        let gain = Math.floor(itemsConfig[name].price * 0.75);
-        await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
-            method: 'POST', body: JSON.stringify({ item_db_id: id, gain: gain })
-        });
-        loadData(); renderInv();
+    async function sellBot(id, name) {
+        let gain = Math.floor(itemsConfig[name].price * 0.7);
+        await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({item_db_id:id, gain:gain})});
+        load(); renderInv();
     }
 
-    async function listOnMarket(id, name) {
-        let p = prompt("Ваша цена:", itemsConfig[name].price);
+    async function listMarket(id, name) {
+        let p = prompt("Цена:", itemsConfig[name].price);
         if(!p) return;
         await fetch(`${SERVER_URL}/market?action=list_lot&user_id=${MY_ID}`, {
             method: 'POST', body: JSON.stringify({ item_db_id: id, item_name: name, price: parseInt(p), username: MY_NAME })
         });
-        loadData(); renderInv();
+        load(); renderInv();
     }
 
     async function loadMarket() {
         const r = await fetch(`${SERVER_URL}/market?action=market_lots`);
         const lots = await r.json();
-        const cont = document.getElementById('market-list');
-        cont.innerHTML = lots.map(l => {
+        document.getElementById('market-list').innerHTML = lots.map(l => {
             let isMy = String(l.seller_id) === String(MY_ID);
             return `<div class="market-lot">
-                <div><b>${l.item_name}</b><br><small>${isMy ? 'Ваш лот' : l.seller_name}</small></div>
+                <div><b>${l.item_name}</b><br><small>${isMy?'Ваш лот':l.seller_name}</small></div>
                 <div style="color:#00ff88">${l.price} 💰</div>
-                <button onclick="${isMy?'cancel':'buy'}(${l.lot_id})" class="btn" style="padding:5px 10px;">${isMy?'СНЯТЬ':'КУПИТЬ'}</button>
+                <button onclick="${isMy?'cancel':'buy'}(${l.lot_id})" class="btn" style="padding:5px 10px; font-size:0.7rem;">${isMy?'СНЯТЬ':'КУПИТЬ'}</button>
             </div>`;
         }).join('');
     }
 
-    async function buy(id) { await fetch(`${SERVER_URL}/market?action=buy_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); loadData(); loadMarket(); }
-    async function cancel(id) { await fetch(`${SERVER_URL}/market?action=cancel_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); loadData(); loadMarket(); }
+    async function buy(id) { await fetch(`${SERVER_URL}/market?action=buy_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); load(); loadMarket(); }
+    async function cancel(id) { await fetch(`${SERVER_URL}/market?action=cancel_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); load(); loadMarket(); }
 
     function renderInv() {
-        const g = document.getElementById('inv-grid');
-        g.innerHTML = myItems.map(i => `
+        document.getElementById('inv-grid').innerHTML = myItems.map(i => `
             <div class="inv-card">
                 <img src="${itemsConfig[i.name].img}"><br><small>${i.name}</small><br>
-                <button onclick="sellToBot(${i.id}, '${i.name}')" style="font-size:0.6rem; color:orange; background:none; border:1px solid orange; margin-top:5px;">БОТУ</button>
-                <button onclick="listOnMarket(${i.id}, '${i.name}')" style="font-size:0.6rem; color:cyan; background:none; border:1px solid cyan; margin-top:5px;">РЫНОК</button>
-            </div>
-        `).join('');
+                <button onclick="sellBot(${i.id}, '${i.name}')" style="font-size:0.5rem; color:orange; background:none; border:1px solid orange; margin-top:5px;">БОТУ</button>
+                <button onclick="listMarket(${i.id}, '${i.name}')" style="font-size:0.5rem; color:cyan; background:none; border:1px solid cyan; margin-top:5px;">МАРКЕТ</button>
+            </div>`).join('');
     }
 
     async function loadTop() {
         const r = await fetch(`${SERVER_URL}/market?action=top`);
         const d = await r.json();
-        document.getElementById('top-list').innerHTML = d.map((p, i) => `
-            <div class="market-lot">
-                <div>#${i+1} <b>${p.username}</b></div>
-                <div style="color:#00ff88">${p.balance}</div>
-            </div>`).join('');
+        document.getElementById('top-list').innerHTML = d.map((p, i) => `<div class="market-lot"><div>#${i+1} ${p.username}</div><div>${p.balance}</div></div>`).join('');
     }
 
     function showScreen(id, el) {
@@ -201,11 +193,9 @@
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
         el.classList.add('active');
-        if(id==='inv') renderInv();
-        if(id==='market') loadMarket();
-        if(id==='top') loadTop();
+        if(id==='inv') renderInv(); else if(id==='market') loadMarket(); else if(id==='top') loadTop();
     }
-    loadData();
+    load();
 </script>
 </body>
 </html>
