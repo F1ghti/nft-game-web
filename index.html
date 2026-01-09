@@ -95,25 +95,51 @@
     };
 
     // Главная функция старта
-    function bootstrap() {
-        MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-        MY_NAME = tg.initDataUnsafe.user?.username || tg.initDataUnsafe.user?.first_name || "Игрок";
+    async function bootstrap() {
+        let attempts = 0;
+        const maxAttempts = 15; // Будем пробовать в течение ~4.5 секунд
 
-        if (!MY_ID) {
-            // Если ID нет сразу, ждем еще 500мс (иногда ТГ тормозит)
-            setTimeout(() => {
-                MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-                if (MY_ID) startApp();
-                else {
-                    document.getElementById('loading-screen').style.display = 'none';
-                    document.getElementById('error-screen').style.display = 'block';
-                }
-            }, 500);
-        } else {
-            startApp();
-        }
+        const checkInterval = setInterval(() => {
+            attempts++;
+            
+            // Пробуем достать данные
+            MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+            MY_NAME = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Игрок";
+
+            if (MY_ID) {
+                // Ура, данные получены!
+                clearInterval(checkInterval);
+                startApp();
+            } else if (attempts >= maxAttempts) {
+                // Если за 15 попыток ничего не пришло — показываем ошибку
+                clearInterval(checkInterval);
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('error-screen').style.display = 'block';
+            }
+            
+            console.log("Попытка получить ID:", attempts);
+        }, 300); // Проверка каждые 300мс
     }
 
+    async function startApp() {
+        // Убеждаемся, что экран загрузки и ошибки скрыты
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('error-screen').style.display = 'none';
+        
+        document.getElementById('game-content').style.display = 'flex';
+        document.getElementById('u-name').innerText = MY_NAME;
+
+        // Отрисовка превью
+        const preview = document.getElementById('case-preview');
+        if (preview) {
+            preview.innerHTML = '';
+            Object.values(itemsConfig).forEach(i => { 
+                preview.innerHTML += `<img src="${i.img}">`; 
+            });
+        }
+
+        await loadData();
+    }
     async function startApp() {
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-content').style.display = 'flex';
@@ -242,3 +268,4 @@
 </script>
 </body>
 </html>
+
