@@ -1,130 +1,8 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Tycoon - Market Edition</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        :root { 
-            --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; 
-            --glass: rgba(255, 255, 255, 0.05); --common: #b0c3d9; --rare: #4b69ff; --legendary: #eb4b4b;
-        }
-        body { 
-            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); 
-            color: white; font-family: 'Segoe UI', sans-serif; margin: 0; 
-            display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; 
-        }
-
-        /* ВЕРХНЯЯ ПАНЕЛЬ */
-        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; z-index: 10; }
-        .balance-box { 
-            background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; 
-            border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88; min-width: 60px; text-align: center;
-        }
-
-        /* ЭКРАНЫ */
-        .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
-        .screen.active { display: flex; }
-
-        /* РУЛЕТКА */
-        .roulette-wrapper {
-            position: relative; width: 100%; height: 140px;
-            display: none; margin: 20px 0; overflow: hidden;
-            background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary);
-        }
-        .roulette-line { display: flex; position: absolute; left: 0; top: 10px; will-change: transform; }
-        .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
-        .roulette-item img { width: 70px; }
-        .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; box-shadow: 0 0 10px #ff4444; }
-
-        /* СПИСКИ (ТОП И МАРКЕТ) */
-        .scroll-list { width: 90%; margin-top: 20px; max-height: 60vh; overflow-y: auto; scrollbar-width: none; }
-        .scroll-list::-webkit-scrollbar { display: none; }
-        
-        .list-item {
-            display: flex; align-items: center; background: var(--glass);
-            padding: 12px; border-radius: 15px; margin-bottom: 8px;
-            border: 1px solid rgba(255,255,255,0.05); justify-content: space-between;
-        }
-        .item-info { display: flex; align-items: center; gap: 12px; flex-grow: 1; }
-        .item-name { font-weight: bold; font-size: 0.9rem; }
-        .item-price { color: #00ff88; font-weight: 800; font-size: 0.9rem; }
-
-        /* ИНВЕНТАРЬ */
-        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
-        .inv-card { background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .inv-card img { width: 50px; }
-        .inv-btns { display: flex; gap: 5px; margin-top: 10px; justify-content: center; }
-        .btn-sm { padding: 5px; border-radius: 8px; font-size: 0.65rem; font-weight: bold; cursor: pointer; border: 1px solid; background: none; flex: 1; }
-
-        /* КНОПКИ И МЕНЮ */
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 15px 35px; border-radius: 18px; color: white; font-weight: bold; cursor: pointer; }
-        .btn:disabled { opacity: 0.3; }
-        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 30px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid var(--glass); z-index: 100; }
-        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
-        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.2); }
-
-        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
-    </style>
-</head>
-<body>
-
-    <div class="top-bar">
-        <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div style="font-weight: 900; letter-spacing: 1px; font-size: 0.7rem;">NFT TYCOON</div>
-    </div>
-
-    <div id="screen-case" class="screen active">
-        <div id="case-ui" style="text-align: center;">
-            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="170" style="cursor: pointer;">
-        </div>
-        <div class="roulette-wrapper" id="roulette-box">
-            <div class="roulette-marker"></div>
-            <div class="roulette-line" id="roulette-line"></div>
-        </div>
-        <h2 id="status" style="margin: 20px 0; font-size: 1.1rem;">ЗАГРУЗКА...</h2>
-        <button class="btn" id="roll-btn" onclick="startRoulette()" disabled>ОТКРЫТЬ (50)</button>
-    </div>
-
-    <div id="screen-inv" class="screen">
-        <h2 style="margin-top: 60px;">🎒 ИНВЕНТАРЬ</h2>
-        <div class="inv-grid" id="inv-grid"></div>
-    </div>
-
-    <div id="screen-market" class="screen">
-        <h2 style="margin-top: 60px; color: var(--primary);">⚖️ МАРКЕТ</h2>
-        <div class="scroll-list" id="market-list"></div>
-    </div>
-
-    <div id="screen-top" class="screen">
-        <h2 style="margin-top: 60px; color: gold;">🏆 ТОП МАГНАТОВ</h2>
-        <div class="scroll-list" id="top-list"></div>
-    </div>
-
-    <div id="win-overlay" class="win-overlay">
-        <div style="text-align: center; background: #1a1a2e; padding: 30px; border-radius: 30px; border: 2px solid var(--primary); width: 80%;">
-            <h2 style="margin: 0; color: gold;">ВЫПАЛО!</h2>
-            <img id="win-img" src="" width="130" style="margin: 15px 0;">
-            <h3 id="win-name" style="margin-bottom: 20px;"></h3>
-            <button class="btn" onclick="collectItem()" style="width: 100%; background: #00ff88; color: black;">ЗАБРАТЬ</button>
-        </div>
-    </div>
-
-    <div class="nav-menu">
-        <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
-        <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
-        <div class="nav-item" onclick="showScreen('market', this)">⚖️</div>
-        <div class="nav-item" onclick="showScreen('top', this)">🏆</div>
-    </div>
-
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
     const SERVER_URL = "https://df40ce8635b4c51b-92-63-106-58.serveousercontent.com"; 
-    
-    // Получаем реальный ID игрока из Telegram
     const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest_test';
     const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
@@ -140,7 +18,6 @@
         "Gold Dragon": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712102.png", color: "#ffd700", price: 1500 }
     };
 
-    // Загрузка данных именно этого игрока
     async function loadData() {
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
@@ -153,84 +30,28 @@
         } catch(e) { document.getElementById('status').innerText = "ОШИБКА"; }
     }
 
-    async function collectItem() {
-        await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'add_item', user_id: MY_ID, item_name: pendingItem })
-        });
-        await loadData();
-        document.getElementById('win-overlay').style.display = 'none';
-        document.getElementById('roulette-box').style.display = 'none';
-        document.getElementById('case-ui').style.display = 'block';
-        isSpinning = false;
-    }
-
-    function renderInv() {
-        const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p style='opacity:0.3;'>ПУСТО</p>";
-        myItems.forEach((item, idx) => {
-            const conf = itemsConfig[item.name];
-            grid.innerHTML += `
-                <div class="inv-card">
-                    <img src="${conf.img}"><br><small>${item.name}</small>
-                    <div class="inv-btns">
-                        <button class="btn-sm" onclick="sellBot(${idx})" style="color:#ffcc00;">БОТУ</button>
-                        <button class="btn-sm" onclick="listMarket(${idx})" style="color:#00d2ff;">РЫНОК</button>
-                    </div>
-                </div>`;
-        });
-    }
-
-    async function sellBot(idx) {
-        const item = myItems[idx];
-        const gain = Math.floor(itemsConfig[item.name].price * 0.75);
-        await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'sell_bot', user_id: MY_ID, item_db_id: item.id, gain: gain })
-        });
-        await loadData();
-        renderInv();
-    }
-
-    async function listMarket(idx) {
-        const item = myItems[idx];
-        const price = prompt(`Цена продажи ${item.name}:`, itemsConfig[item.name].price);
-        if(!price || isNaN(price)) return;
-        await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'list_market', user_id: MY_ID, username: MY_NAME, item_db_id: item.id, item_name: item.name, price: parseInt(price) })
-        });
-        await loadData();
-        renderInv();
-    }
-
-    async function loadMarket() {
-        const list = document.getElementById('market-list');
+    async function loadTop() {
+        const list = document.getElementById('top-list');
         list.innerHTML = "Загрузка...";
-        const r = await fetch(`${SERVER_URL}/market?action=get_market`);
-        const items = await r.json();
-        list.innerHTML = items.length ? "" : "<p>МАРКЕТ ПУСТ</p>";
-        items.forEach(item => {
-            const conf = itemsConfig[item.item_name];
-            list.innerHTML += `
-                <div class="list-item">
-                    <div class="item-info"><img src="${conf.img}" width="30"> ${item.item_name}</div>
-                    <div>
-                        <span class="item-price">${item.price} 💰</span>
-                        ${item.seller_id !== MY_ID ? `<button onclick="buyMarket(${item.slot_id})">КУПИТЬ</button>` : ''}
-                    </div>
-                </div>`;
-        });
+        try {
+            const r = await fetch(`${SERVER_URL}/market?action=top`);
+            const data = await r.json();
+            list.innerHTML = "";
+            data.forEach((player, index) => {
+                let medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `#${index + 1}`;
+                list.innerHTML += `
+                    <div class="list-item" style="${player.username === MY_NAME ? 'border: 1px solid var(--primary); background: rgba(0,210,255,0.1);' : ''}">
+                        <div class="item-info">
+                            <span style="font-weight:bold; width:25px;">${medal}</span>
+                            <div class="item-name">${player.username}</div>
+                        </div>
+                        <div class="item-price">${player.balance} 💰</div>
+                    </div>`;
+            });
+        } catch(e) { list.innerHTML = "Ошибка загрузки ТОПа"; }
     }
 
-    async function buyMarket(slotId) {
-        await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'buy_market', user_id: MY_ID, slot_id: slotId })
-        });
-        await loadData();
-        loadMarket();
-    }
+    // ... (остальные функции: startRoulette, collectItem, renderInv, sellBot, listMarket, buyMarket) ...
 
     function showScreen(id, el) {
         if(isSpinning) return;
@@ -238,12 +59,11 @@
         document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.getElementById('screen-' + id).classList.add('active');
         el.classList.add('active');
+        
         if(id === 'inv') renderInv();
         if(id === 'market') loadMarket();
+        if(id === 'top') loadTop(); // Загружаем ТОП при открытии экрана
     }
 
     loadData();
 </script>
-</body>
-</html>
-
