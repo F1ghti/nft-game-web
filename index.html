@@ -94,8 +94,8 @@
     
     let MY_ID = "test_user";
     let MY_NAME = "User";
-    let coins = 0, myItems = [], pendingItem = null;
-    let isSpinning = false; // Флаг блокировки повторного открытия
+    let coins = 0, myItems = [], marketItems = [], pendingItem = null;
+    let isSpinning = false;
 
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
@@ -117,16 +117,22 @@
             if (d.balance !== undefined) {
                 coins = d.balance; 
                 myItems = d.inventory;
+                marketItems = d.market_items || [];
                 document.getElementById('coins').innerText = coins;
+                
+                // Обновляем текущий экран, если мы на инвентаре или маркете
+                const activeScreen = document.querySelector('.screen.active').id;
+                if(activeScreen === 'screen-inv') renderInv();
+                if(activeScreen === 'screen-market') renderMarket();
             }
         } catch (e) {
-            console.error("Ошибка при загрузке данных:", e);
+            console.error("Load Error:", e);
             setTimeout(loadData, 3000);
         }
     }
 
     function showCaseContents() {
-        if (isSpinning) return; // Не показывать содержимое во время крутки
+        if (isSpinning) return;
         const list = document.getElementById('drop-list');
         list.innerHTML = '';
         Object.entries(itemsConfig).forEach(([name, data]) => {
@@ -139,10 +145,9 @@
     }
 
     function startRoulette() {
-        if (isSpinning) return; // Если уже крутим — игнорируем нажатие
-        if (coins < 50) return alert("Недостаточно монет!");
+        if (isSpinning || coins < 50) return;
         
-        isSpinning = true; // Блокируем кнопку
+        isSpinning = true;
         const btn = document.getElementById('open-btn');
         btn.disabled = true;
         btn.innerText = "ОТКРЫВАЕМ...";
@@ -173,76 +178,119 @@
             document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
             document.getElementById('win-overlay').style.display = 'flex';
-            
-            // Сбрасываем текст кнопки, но она остается неактивной до нажатия "ЗАБРАТЬ"
             btn.innerText = "ОТКРЫТЬ (50)";
         }, 5600);
     }
 
     async function collectItem() {
-        coins -= 50;
-        document.getElementById('coins').innerText = coins;
-
         try {
             await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ item_name: pendingItem, balance: coins })
+                body: JSON.stringify({ item_name: pendingItem, balance: coins - 50 })
             });
             document.getElementById('win-overlay').style.display = 'none';
             document.getElementById('roulette-box').style.display = 'none';
             document.getElementById('case-ui').style.display = 'block';
-            
-            // Разблокируем возможность крутить снова
             isSpinning = false;
             document.getElementById('open-btn').disabled = false;
-            
             loadData();
-        } catch (e) {
-            alert("Ошибка сохранения на сервере!");
-            isSpinning = false;
-            document.getElementById('open-btn').disabled = false;
-        }
+        } catch (e) { alert("Ошибка!"); }
     }
 
+    // --- ИНВЕНТАРЬ ---
     function renderInv() {
         const grid = document.getElementById('inv-grid');
         if (myItems.length === 0) {
-            grid.innerHTML = '<p style="grid-column: 1/3; opacity: 0.5;">Тут пока пусто...</p>';
+            grid.innerHTML = '<p style="grid-column: 1/3; opacity: 0.5;">Пусто...</p>';
             return;
         }
-        grid.innerHTML = myItems.map(i => `
+        grid.innerHTML = myItems.map(i => {
+            let botPrice = Math.floor(itemsConfig[i.name].price * 0.75);
+            return `
             <div class="inv-card">
-                <img src="${itemsConfig[i.name].img}" width="50"><br><small>${i.name}</small><br>
-                <button class="btn" onclick="sellBot(${i.id}, '${i.name}')" style="padding: 5px 10px; font-size: 10px; margin-top: 10px;">ПРОДАТЬ</button>
-            </div>`).join('');
+                <img src="${itemsConfig[i.name].img}" width="50"><br><small>${i.name}</small>
+                <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
+                    <button class="btn" onclick="sellBot(${i.id}, ${botPrice})" style="padding:5px; font-size:10px; background:gray;">БОТУ (${botPrice})</button>
+                    <button class="btn" onclick="listMarket(${i.id}, '${i.name}')" style="padding:5px; font-size:10px;">НА МАРКЕТ</button>
+                </div>
+            </div>`;
+        }).join('');
     }
 
-    async function sellBot(id, name) {
-        let gain = Math.floor(itemsConfig[name].price * 0.7);
-        try {
-            await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
-                method:'POST', 
-                headers: {'Content-Type': 'application/json'},
-                body:JSON.stringify({item_db_id:id, gain:gain})
-            });
-            loadData().then(renderInv);
-        } catch (e) {}
+    async function sellBot(id, gain) {
+        if(!confirm("Продать боту за 75%?")) return;
+        await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({item_db_id:id, gain:gain})
+        });
+        loadData();
+    }
+
+    async function listMarket(id, name) {
+        let price = prompt(`За сколько продаем ${name}?`, itemsConfig[name].price);
+        if(!price || isNaN(price)) return;
+        await fetch(`${SERVER_URL}/market?action=list_on_market&user_id=${MY_ID}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({item_db_id:id, price: parseInt(price)})
+        });
+        loadData();
+    }
+
+    // --- МАРКЕТ ---
+    function renderMarket() {
+        const list = document.getElementById('market-list');
+        if (!marketItems || marketItems.length === 0) {
+            list.innerHTML = '<p style="opacity:0.5; text-align:center;">На маркете пока нет лотов</p>';
+            return;
+        }
+        list.innerHTML = marketItems.map(item => `
+            <div class="drop-item" style="justify-content: space-between; border-left-color: ${itemsConfig[item.name].color}">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="${itemsConfig[item.name].img}" width="35">
+                    <div style="text-align:left">
+                        <div style="font-weight:bold">${item.name}</div>
+                        <div style="color:#00ff88; font-size:12px;">Цена: ${item.price} 💰</div>
+                    </div>
+                </div>
+                ${item.seller_id == MY_ID 
+                    ? `<button class="btn" onclick="cancelSale(${item.slot_id})" style="background:red; padding:8px 12px; font-size:10px;">СНЯТЬ</button>`
+                    : `<button class="btn" onclick="buyMarket(${item.slot_id}, ${item.price})" style="background:green; padding:8px 12px; font-size:10px;">КУПИТЬ</button>`
+                }
+            </div>
+        `).join('');
+    }
+
+    async function cancelSale(slotId) {
+        await fetch(`${SERVER_URL}/market?action=cancel_market&user_id=${MY_ID}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({slot_id: slotId})
+        });
+        loadData();
+    }
+
+    async function buyMarket(slotId, price) {
+        if(coins < price) return alert("Не хватает монет!");
+        await fetch(`${SERVER_URL}/market?action=buy_market&user_id=${MY_ID}`, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({slot_id: slotId})
+        });
+        loadData();
     }
 
     function showScreen(id, el) {
-        if (isSpinning && id !== 'case') {
-            alert("Дождитесь окончания прокрутки!");
-            return;
-        }
+        if (isSpinning && id !== 'case') return;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
         el.classList.add('active');
-        if(id==='inv') renderInv(); 
+        if(id === 'inv') renderInv();
+        if(id === 'market') renderMarket();
     }
 
     loadData();
+    // Авто-обновление раз в 10 секунд для маркета
+    setInterval(loadData, 10000);
 </script>
 </body>
 </html>
