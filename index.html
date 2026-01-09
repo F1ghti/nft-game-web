@@ -31,6 +31,50 @@ body{
 .popup{background:#111;padding:25px;border-radius:30px;text-align:center;}
 .list{width:90%;margin-top:80px;max-height:60vh;overflow-y:auto}
 .item{display:flex;justify-content:space-between;align-items:center; background:var(--glass);padding:12px;border-radius:15px;margin-bottom:8px}
+
+/* --- СТИЛИ РУЛЕТКИ --- */
+.roulette-container {
+    position: relative;
+    width: 100%;
+    height: 140px;
+    background: rgba(255,255,255,0.03);
+    border-top: 2px solid var(--primary);
+    border-bottom: 2px solid var(--primary);
+    margin-top: 100px;
+    overflow: hidden;
+    display: none;
+}
+.roulette-track {
+    display: flex;
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    transition: transform 5s cubic-bezier(0.15, 0, 0.15, 1);
+}
+.roulette-item {
+    width: 120px;
+    height: 100%;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid rgba(255,255,255,0.05);
+}
+.roulette-item img { width: 60px; height: 60px; }
+.roulette-item span { font-size: 0.6rem; margin-top: 5px; opacity: 0.7; text-align: center; }
+.pointer {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--green);
+    z-index: 10;
+    box-shadow: 0 0 15px var(--green);
+    transform: translateX(-50%);
+}
 </style>
 </head>
 <body>
@@ -40,9 +84,15 @@ body{
 </div>
 
 <div id="case" class="screen active">
- <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180" style="margin-top:100px;cursor:pointer" onclick="openCasePreview()">
+ <div id="roulette" class="roulette-container">
+    <div class="pointer"></div>
+    <div id="track" class="roulette-track"></div>
+ </div>
+
+ <img id="caseStaticImg" src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180" style="margin-top:100px;cursor:pointer" onclick="openCasePreview()">
+ 
  <h3 id="status">КЕЙС ГОТОВ</h3>
- <button class="btn" onclick="openCase()">ОТКРЫТЬ (50)</button>
+ <button id="openBtn" class="btn" onclick="openCase()">ОТКРЫТЬ (50)</button>
 </div>
 
 <div id="inv" class="screen">
@@ -79,11 +129,9 @@ body{
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-// Настройка подключения к твоему серверу
-const SERVER_URL = "https://41ce26c1ca617b9a-92-63-106-58.serveousercontent.com"; // Убедись, что тоннель запущен
+const SERVER_URL = "https://41ce26c1ca617b9a-92-63-106-58.serveousercontent.com";
 const API_URL = SERVER_URL + "/api";
 
-// Данные игрока
 const MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "12345";
 const MY_NAME = tg.initDataUnsafe?.user?.first_name || "Guest";
 
@@ -94,7 +142,7 @@ const itemData = {
  "Gold Dragon": {img:"https://cdn-icons-png.flaticon.com/512/4712/4712102.png",price:1500}
 };
 
-let coins=0, myInv=[];
+let coins=0, myInv=[], isSpinning = false;
 
 async function apiRequest(data){
     return fetch(API_URL,{
@@ -107,40 +155,96 @@ async function apiRequest(data){
 async function loadData(){
  try {
     const url = `${API_URL}?user_id=${MY_ID}`;
-    console.log("Запрашиваю данные для ID:", MY_ID);
-    
     const r = await fetch(url);
     const d = await r.json();
-
-    // Если сервер прислал ошибку (например, пользователя нет в базе)
     if (d.error) {
-        console.warn("Сервер ответил ошибкой:", d.error);
-        document.getElementById("coins").innerText = "Регистрация...";
-        // Если пользователя нет, пробуем его "создать" через простой запрос (опционально)
+        document.getElementById("coins").innerText = "Ошибка";
         return;
     }
-
-    // Если всё ок, обновляем цифры
     coins = d.balance; 
     myInv = d.inventory || [];
     document.getElementById("coins").innerText = coins;
-    
     if(document.getElementById("inv").classList.contains("active")) renderInv();
- } catch(e) { 
-    console.error("Критическая ошибка сети:", e);
-    document.getElementById("coins").innerText = "Ошибка сети";
- }
+ } catch(e) { document.getElementById("coins").innerText = "Ошибка"; }
 }
+
 function closePreview(){ document.getElementById("casePreview").style.display="none"; }
+function openCasePreview(){
+    const box = document.getElementById("caseItems");
+    box.innerHTML = "";
+    Object.keys(itemData).forEach(k => {
+        box.innerHTML += `<div><img src="${itemData[k].img}" width="20"> ${k}</div>`;
+    });
+    document.getElementById("casePreview").style.display="flex";
+}
 
 async function openCase(){
+ if(isSpinning) return;
  if(coins < 50){ alert("Недостаточно 💰"); return; }
- await apiRequest({action:"open_case", user_id:MY_ID});
- const keys = Object.keys(itemData);
- const win = keys[Math.floor(Math.random()*keys.length)];
- await apiRequest({action:"add_item", user_id:MY_ID, item:win});
- alert("Вам выпало: " + win + "!");
- await loadData();
+
+ const track = document.getElementById("track");
+ const openBtn = document.getElementById("openBtn");
+ const roulette = document.getElementById("roulette");
+ const staticImg = document.getElementById("caseStaticImg");
+ const status = document.getElementById("status");
+
+ isSpinning = true;
+ openBtn.disabled = true;
+ openBtn.style.opacity = "0.5";
+ status.innerText = "КРУТИМ...";
+
+ try {
+    const res = await apiRequest({action:"open_case", user_id:MY_ID});
+    if(res.error) throw new Error("Ошибка баланса");
+
+    const keys = Object.keys(itemData);
+    const win = keys[Math.floor(Math.random()*keys.length)];
+
+    staticImg.style.display = "none";
+    roulette.style.display = "block";
+    track.style.transition = "none";
+    track.style.transform = "translateX(0px)";
+    track.innerHTML = "";
+
+    const itemCount = 60;
+    const winIndex = 55;
+    
+    for (let i = 0; i < itemCount; i++) {
+        const itemName = (i === winIndex) ? win : keys[Math.floor(Math.random()*keys.length)];
+        const item = itemData[itemName];
+        track.innerHTML += `
+            <div class="roulette-item">
+                <img src="${item.img}">
+                <span>${itemName}</span>
+            </div>`;
+    }
+
+    setTimeout(() => {
+        const itemWidth = 120;
+        const centerOffset = roulette.offsetWidth / 2;
+        const targetPos = (winIndex * itemWidth) + (itemWidth / 2) - centerOffset;
+        track.style.transition = "transform 5s cubic-bezier(0.15, 0, 0.15, 1)";
+        track.style.transform = `translateX(-${targetPos}px)`;
+    }, 100);
+
+    setTimeout(async () => {
+        await apiRequest({action:"add_item", user_id:MY_ID, item:win});
+        alert("🎉 Выпало: " + win);
+        isSpinning = false;
+        openBtn.disabled = false;
+        openBtn.style.opacity = "1";
+        status.innerText = "КЕЙС ГОТОВ";
+        staticImg.style.display = "block";
+        roulette.style.display = "none";
+        await loadData();
+    }, 5500);
+
+ } catch(e) {
+    alert(e.message);
+    isSpinning = false;
+    openBtn.disabled = false;
+    openBtn.style.opacity = "1";
+ }
 }
 
 function renderInv(){
@@ -182,18 +286,17 @@ async function loadMarket(){
     d.forEach(l=>{
         list.innerHTML += `
         <div class="item">
-            <span><b>${l.item}</b> <br><small>продавец: ${l.seller_name}</small></span>
-            <span>${l.price}💰 ${l.seller_id === MY_ID ? 
-                `<button class="small-btn" onclick="cancelLot(${l.slot})">СНЯТЬ</button>` : 
+            <span><b>${l.i}</b> <br><small>продавец: ${l.sn}</small></span>
+            <span>${l.p}💰 ${l.sid === MY_ID ? 
+                `<button class="small-btn">МОЁ</button>` : 
                 `<button class="small-btn" onclick="buy(${l.slot})">КУПИТЬ</button>`}
             </span>
         </div>`;
     });
- } catch(e) { list.innerHTML="Ошибка связи с рынком"; }
+ } catch(e) { list.innerHTML="Ошибка связи"; }
 }
 
 async function buy(s){ await apiRequest({action:"buy", user_id:MY_ID, slot:s}); await loadData(); loadMarket(); }
-async function cancelLot(s){ await apiRequest({action:"cancel_lot", user_id:MY_ID, slot:s}); await loadData(); loadMarket(); }
 
 async function loadTop(){
  const list = document.getElementById("topList");
@@ -218,9 +321,7 @@ function show(id, el){
  if(id==="top") loadTop();
 }
 
-// Первый запуск
 loadData();
 </script>
 </body>
 </html>
-
