@@ -3,135 +3,159 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Deluxe Roulette</title>
+    <title>NFT Deluxe Evolution</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.1); }
-        body { background: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        :root { 
+            --primary: #00d2ff; 
+            --accent: #9d50bb; 
+            --bg: #050505; 
+            --glass: rgba(255, 255, 255, 0.05);
+            --neon-blue: #00f2ff;
+            --neon-purple: #bc13fe;
+        }
         
-        /* Верхняя панель */
-        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; z-index: 10; }
-        .balance-box { background: var(--glass); padding: 10px 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); font-weight: bold; color: #00ff88; }
+        body { 
+            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); 
+            color: white; 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            margin: 0; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            height: 100vh; 
+            overflow: hidden; 
+        }
 
-        /* Экран кейса и РУЛЕТКА */
-        .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
+        /* --- ВЕРХНЯЯ ПАНЕЛЬ --- */
+        .top-bar { 
+            width: 90%; display: flex; justify-content: space-between; align-items: center; 
+            margin-top: 25px; z-index: 10; 
+        }
+        .balance-box { 
+            background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; 
+            border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88;
+            box-shadow: 0 0 15px rgba(0,255,136,0.1); backdrop-filter: blur(10px);
+        }
+
+        /* --- ЭКРАН КЕЙСА --- */
+        .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; transition: 0.5s; }
         .screen.active { display: flex; }
 
-        .case-preview { width: 180px; cursor: pointer; transition: transform 0.3s; z-index: 5; }
-        .case-preview:active { transform: scale(0.9); }
+        .case-container { position: relative; display: flex; flex-direction: column; align-items: center; transition: 0.5s; }
+        .case-preview { 
+            width: 220px; filter: drop-shadow(0 0 20px rgba(0,210,255,0.3)); 
+            cursor: pointer; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        }
+        .case-preview:hover { transform: scale(1.05) rotate(2deg); }
+        .case-preview:active { transform: scale(0.95); }
 
-        /* Контейнер рулетки */
-        .roulette-container {
-            position: relative;
-            width: 100%;
-            height: 120px;
-            background: rgba(0,0,0,0.5);
-            border-top: 2px solid var(--primary);
-            border-bottom: 2px solid var(--primary);
-            overflow: hidden;
-            display: none; /* Появляется только при кручении */
-            margin: 20px 0;
+        /* --- СОВРЕМЕННАЯ РУЛЕТКА --- */
+        .roulette-wrapper {
+            position: relative; width: 100%; height: 160px;
+            display: none; margin: 20px 0; overflow: hidden;
+            background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 50%, transparent 100%);
         }
         .roulette-line {
-            display: flex;
-            position: absolute;
-            left: 0;
-            top: 10px;
-            transition: transform 4s cubic-bezier(0.15, 0, 0.05, 1); /* Плавная остановка как в КС */
+            display: flex; position: absolute; left: 0; top: 20px;
+            will-change: transform; transition: transform 5s cubic-bezier(0.1, 0, 0, 1);
         }
         .roulette-item {
-            min-width: 100px;
-            height: 100px;
-            margin: 0 5px;
-            background: var(--glass);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-bottom: 4px solid #ccc;
+            min-width: 120px; height: 120px; margin: 0 8px;
+            background: var(--glass); border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(5px);
+            position: relative; overflow: hidden;
         }
-        .roulette-item img { width: 70px; }
+        .roulette-item::after {
+            content: ''; position: absolute; bottom: 0; width: 100%; height: 4px;
+            background: currentColor; filter: blur(2px);
+        }
+        .roulette-item img { width: 80px; transition: 0.3s; }
         .roulette-marker {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            background: #ff4444;
-            transform: translateX(-50%);
-            z-index: 10;
-            box-shadow: 0 0 15px #ff4444;
+            position: absolute; left: 50%; top: 0; bottom: 0; width: 2px;
+            background: var(--neon-blue); transform: translateX(-50%); z-index: 10;
+            box-shadow: 0 0 20px var(--neon-blue);
         }
 
-        /* Модальное окно просмотра кейса */
+        /* --- МОДАЛЬНОЕ ОКНО --- */
         .modal {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
-            z-index: 200;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); z-index: 1000;
+            flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: 0.3s;
         }
         .modal-content {
-            background: #1a1a2e;
-            padding: 20px;
-            border-radius: 20px;
-            width: 80%;
-            max-height: 70vh;
-            overflow-y: auto;
-            border: 1px solid var(--primary);
+            background: rgba(20, 20, 35, 0.95); padding: 30px; border-radius: 30px;
+            width: 85%; max-height: 70vh; overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px rgba(0,0,0,0.5);
         }
+        .preview-card {
+            display: flex; align-items: center; padding: 15px; margin-bottom: 12px;
+            background: rgba(255,255,255,0.03); border-radius: 15px; border-left: 5px solid;
+            animation: slideIn 0.3s ease-out backwards;
+        }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-        /* Остальное (Инвентарь, Маркет) */
-        .inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-height: 65vh; overflow-y: auto; padding: 10px; }
-        .inv-card { background: var(--glass); padding: 15px; border-radius: 15px; text-align: center; border-bottom: 4px solid transparent; }
-        .inv-card img { width: 60px; }
+        /* --- КНОПКИ И НАВИГАЦИЯ --- */
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border: none; padding: 16px 45px; border-radius: 20px;
+            color: white; font-weight: 800; font-size: 1rem; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0, 210, 255, 0.2); transition: 0.3s;
+        }
+        .btn:active { transform: scale(0.96); box-shadow: 0 5px 10px rgba(0, 210, 255, 0.2); }
+        .btn:disabled { opacity: 0.5; filter: grayscale(1); }
 
-        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 20px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 25px; border: 1px solid var(--glass); z-index: 100; }
-        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.5; }
-        .nav-item.active { opacity: 1; color: var(--primary); }
+        .nav-menu {
+            position: fixed; bottom: 25px; display: flex; gap: 30px;
+            background: rgba(10, 10, 10, 0.7); padding: 15px 35px; border-radius: 30px;
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); z-index: 100;
+        }
+        .nav-item { font-size: 1.6rem; cursor: pointer; transition: 0.3s; filter: grayscale(1); opacity: 0.4; }
+        .nav-item.active { filter: grayscale(0); opacity: 1; transform: translateY(-5px) scale(1.1); }
 
-        .btn { background: linear-gradient(90deg, var(--primary), var(--accent)); border: none; padding: 15px 40px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        /* Скрытые элементы */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div style="font-weight: bold; letter-spacing: 2px;">NFT DELUXE</div>
+        <div style="font-weight: 900; letter-spacing: 3px; font-size: 0.9rem;">NFT DELUXE</div>
     </div>
 
     <div id="screen-case" class="screen active">
-        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" class="case-preview" onclick="openPreview()">
-        <p style="font-size: 0.7rem; opacity: 0.6;">Нажми на кейс, чтобы заглянуть внутрь</p>
+        <div id="case-ui" class="case-container">
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" class="case-preview" onclick="openPreview()">
+            <p style="margin-top: 15px; font-size: 0.8rem; letter-spacing: 1px; color: var(--primary); text-transform: uppercase; font-weight: bold;">Нажми на кейс</p>
+        </div>
         
-        <div class="roulette-container" id="roulette-box">
+        <div class="roulette-wrapper" id="roulette-box">
             <div class="roulette-marker"></div>
             <div class="roulette-line" id="roulette-line"></div>
         </div>
 
-        <h2 id="status">КЕЙС ГОТОВ</h2>
+        <h2 id="status" style="margin: 20px 0; text-align: center; font-weight: 900; min-height: 30px;">КЕЙС ГОТОВ</h2>
         <button class="btn" id="roll-btn" onclick="startRoulette()">ОТКРЫТЬ (50)</button>
     </div>
 
-    <div id="preview-modal" class="modal" onclick="this.style.display='none'">
+    <div id="preview-modal" class="modal" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3>Содержимое кейса:</h3>
+            <h2 style="margin-top: 0; color: var(--primary);">Внутри кейса:</h2>
             <div id="preview-list"></div>
-            <button class="btn" style="width:100%" onclick="document.getElementById('preview-modal').style.display='none'">ЗАКРЫТЬ</button>
+            <button class="btn" style="width:100%; margin-top: 20px;" onclick="closeModal()">ЗАКРЫТЬ</button>
         </div>
     </div>
 
     <div id="screen-inv" class="screen">
-        <h2 style="margin-top: 60px;">🎒 МОИ ВЕЩИ</h2>
+        <h2 style="margin-top: 70px;">🎒 МОИ ВЕЩИ</h2>
         <div class="inv-grid" id="inv-grid"></div>
     </div>
 
     <div id="screen-market" class="screen">
-        <h2 style="margin-top: 60px;">🛒 МАРКЕТПЛЕЙС</h2>
-        <div class="inv-grid" id="market-grid"></div>
+        <h2 style="margin-top: 70px;">🛒 МАРКЕТПЛЕЙС</h2>
+        <div id="market-grid" style="width: 90%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-height: 60vh; overflow-y: auto;"></div>
     </div>
 
     <div class="nav-menu">
@@ -147,13 +171,27 @@
 
     let coins = 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
-    let marketLots = [];
 
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
         "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#9d50bb" },
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#ffcc00" }
     };
+
+    // --- ЗВУКОВОЙ ДВИЖОК (WEB AUDIO) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playClickSound() {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
 
     function updateUI() {
         document.getElementById('coins').innerText = coins;
@@ -162,91 +200,115 @@
 
     // --- ЛОГИКА РУЛЕТКИ ---
     function startRoulette() {
-        if (coins < 50) { tg.showAlert("Недостаточно монет!"); return; }
+        if (coins < 50) { tg.showAlert("❌ Недостаточно монет!"); return; }
         
-        coins -= 50;
-        updateUI();
-        syncBalanceWithServer();
+        coins -= 50; updateUI(); syncBalanceWithServer();
+        audioCtx.resume(); // Активируем звук
 
         const btn = document.getElementById('roll-btn');
         const line = document.getElementById('roulette-line');
         const box = document.getElementById('roulette-box');
+        const caseUI = document.getElementById('case-ui');
         const status = document.getElementById('status');
-        const caseImg = document.querySelector('.case-preview');
 
         btn.disabled = true;
-        caseImg.style.display = 'none';
-        box.style.display = 'block';
-        status.innerText = "КРУТИМ...";
+        caseUI.style.opacity = '0';
+        setTimeout(() => { 
+            caseUI.classList.add('hidden'); 
+            box.style.display = 'block';
+        }, 300);
 
-        // Генерируем 50 случайных предметов для ленты
+        status.innerText = "УДАЧИ...";
         line.innerHTML = '';
         line.style.transition = 'none';
         line.style.transform = 'translateX(0)';
 
-        const itemsKeys = Object.keys(itemsConfig);
+        const keys = Object.keys(itemsConfig);
         const tape = [];
-        for(let i=0; i<50; i++) {
-            const key = itemsKeys[Math.floor(Math.random() * itemsKeys.length)];
+        for(let i=0; i<60; i++) {
+            const key = keys[Math.floor(Math.random() * keys.length)];
             tape.push(key);
             const el = document.createElement('div');
             el.className = 'roulette-item';
-            el.style.borderBottomColor = itemsConfig[key].color;
+            el.style.color = itemsConfig[key].color;
             el.innerHTML = `<img src="${itemsConfig[key].img}">`;
             line.appendChild(el);
         }
 
-        // Определяем победителя (например, 45-й элемент)
-        const winIndex = 40 + Math.floor(Math.random() * 5); 
+        const winIndex = 50; 
         const winName = tape[winIndex];
+        const itemWidth = 136; // 120 + 16 (margin)
 
-        // Запускаем анимацию
-        setTimeout(() => {
-            line.style.transition = 'transform 4s cubic-bezier(0.15, 0, 0.05, 1)';
-            // Смещение: (ширина айтема 100 + маргин 10) * индекс - половина экрана + центровка айтема
-            const itemWidth = 110;
-            const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
-            line.style.transform = `translateX(-${offset}px)`;
+        // Анимация звука (синхронно с прокруткой)
+        let currentTick = 0;
+        const tickInterval = setInterval(() => {
+            const transform = new WebKitCSSMatrix(window.getComputedStyle(line).transform);
+            const x = Math.abs(transform.m41);
+            const tick = Math.floor(x / itemWidth);
+            if(tick > currentTick) {
+                playClickSound();
+                currentTick = tick;
+            }
         }, 50);
 
         setTimeout(() => {
-            status.innerText = "ВЫ ВЫИГРАЛИ: " + winName;
+            line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
+            const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
+            line.style.transform = `translateX(-${offset}px)`;
+        }, 100);
+
+        setTimeout(() => {
+            clearInterval(tickInterval);
+            status.innerText = winName.toUpperCase();
             status.style.color = itemsConfig[winName].color;
             myItems.push({ id: Date.now().toString(), name: winName });
             updateUI();
             btn.disabled = false;
             tg.HapticFeedback.notificationOccurred('success');
             
-            // Через 2 секунды возвращаем кейс
             setTimeout(() => {
-                caseImg.style.display = 'block';
                 box.style.display = 'none';
+                caseUI.classList.remove('hidden');
+                setTimeout(() => caseUI.style.opacity = '1', 50);
                 status.style.color = 'white';
                 status.innerText = "КЕЙС ГОТОВ";
-            }, 3000);
-        }, 4500);
+            }, 3500);
+        }, 5500);
     }
 
-    // --- ПРЕДПРОСМОТР КЕЙСА ---
+    // --- МОДАЛЬНОЕ ОКНО ---
     function openPreview() {
         const modal = document.getElementById('preview-modal');
         const list = document.getElementById('preview-list');
         list.innerHTML = '';
-        
-        Object.keys(itemsConfig).forEach(name => {
+        Object.keys(itemsConfig).forEach((name, i) => {
             const item = itemsConfig[name];
             const div = document.createElement('div');
-            div.style = "display:flex; align-items:center; margin:10px 0; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px;";
-            div.innerHTML = `<img src="${item.img}" width="40" style="margin-right:15px"> 
-                             <b style="color:${item.color}">${name}</b>`;
+            div.className = 'preview-card';
+            div.style.borderColor = item.color;
+            div.style.animationDelay = (i * 0.1) + 's';
+            div.innerHTML = `<img src="${item.img}" width="50" style="margin-right:20px; filter: drop-shadow(0 0 5px ${item.color})"> 
+                             <div><b style="color:${item.color}; font-size:1.1rem">${name}</b><br><small style="opacity:0.5">РЕДКОСТЬ: ШАНС 33%</small></div>`;
             list.appendChild(div);
         });
         modal.style.display = 'flex';
+        setTimeout(() => modal.style.opacity = '1', 10);
     }
 
-    // --- ОСТАЛЬНЫЕ ФУНКЦИИ (Баланс, Маркет, Инв) ---
-    async function syncBalanceWithServer() {
-        try { fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "sync_balance", user_id: MY_ID, balance: coins }) }); } catch (e) {}
+    function closeModal() {
+        const modal = document.getElementById('preview-modal');
+        modal.style.opacity = '0';
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
+
+    // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+    function showScreen(id, el) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.getElementById('screen-' + id).classList.add('active');
+        el.classList.add('active');
+        if(id === 'inv') renderInv();
+        if(id === 'market') renderMarket();
     }
 
     async function initialLoad() {
@@ -257,13 +319,8 @@
         } catch(e) { coins = 1000; updateUI(); }
     }
 
-    function showScreen(id, el) {
-        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('screen-' + id).classList.add('active');
-        el.classList.add('active');
-        if(id === 'inv') renderInv();
-        if(id === 'market') renderMarket();
+    async function syncBalanceWithServer() {
+        fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "sync_balance", user_id: MY_ID, balance: coins }) }).catch(()=>{});
     }
 
     function renderInv() {
@@ -271,24 +328,12 @@
         grid.innerHTML = myItems.length ? "" : "Пусто";
         myItems.forEach(i => {
             const conf = itemsConfig[i.name];
-            const card = document.createElement('div');
-            card.className = 'inv-card';
-            card.style.borderBottomColor = conf.color;
-            card.innerHTML = `<img src="${conf.img}"><br><b>${i.name}</b>
-                <button class="sell-btn market-btn" style="background:#00d2ff" onclick="listOnMarket('${i.id}')">МАРКЕТ</button>`;
-            grid.appendChild(card);
+            const div = document.createElement('div');
+            div.style = `background:var(--glass); padding:15px; border-radius:20px; text-align:center; border: 1px solid rgba(255,255,255,0.05);`;
+            div.innerHTML = `<img src="${conf.img}" width="60"><br><b style="color:${conf.color}">${i.name}</b><br>
+                <button class="btn" style="padding:8px 15px; font-size:0.7rem; margin-top:10px;" onclick="listOnMarket('${i.id}')">ПРОДАТЬ</button>`;
+            grid.appendChild(div);
         });
-    }
-
-    async function listOnMarket(id) {
-        const idx = myItems.findIndex(i => i.id === id);
-        const item = myItems[idx];
-        const price = prompt("Цена продажи:", 100);
-        if(!price || isNaN(price)) return;
-        try {
-            const res = await fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "list_lot", lot: {...item, marketPrice: price, ownerId: MY_ID, sellerName: "Игрок"} }) });
-            if(res.ok) { myItems.splice(idx,1); updateUI(); renderInv(); }
-        } catch(e) {}
     }
 
     async function renderMarket() {
@@ -297,34 +342,36 @@
         try {
             const resp = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
             const data = await resp.json();
-            marketLots = data.lots;
-            grid.innerHTML = marketLots.length ? "" : "Лотов нет";
-            marketLots.forEach(l => {
+            grid.innerHTML = data.lots.length ? "" : "Лотов нет";
+            data.lots.forEach(l => {
                 const conf = itemsConfig[l.name];
-                const card = document.createElement('div');
-                card.className = 'inv-card';
                 const isOwner = String(l.ownerId) === String(MY_ID);
-                card.style.borderBottomColor = isOwner ? "#00ff88" : conf.color;
-                card.innerHTML = `<img src="${conf.img}"><br><small>${isOwner ? "ВАШ ЛОТ" : l.sellerName}</small><br><b>${l.name}</b><br>💰 ${l.marketPrice}<br>
-                    ${isOwner ? `<button class="sell-btn" onclick="removeFromMarket('${l.id}')">СНЯТЬ</button>` : `<button class="sell-btn market-btn" style="background:#00d2ff" onclick="buyLot('${l.id}')">КУПИТЬ</button>`}`;
+                const card = document.createElement('div');
+                card.style = `background:var(--glass); padding:15px; border-radius:20px; text-align:center; border-left: 4px solid ${isOwner ? '#00ff88' : conf.color}`;
+                card.innerHTML = `<img src="${conf.img}" width="50"><br><small>${isOwner ? "⭐ ВАШ ЛОТ" : l.sellerName}</small><br><b>${l.name}</b><br><span style="color:#00ff88">💰 ${l.marketPrice}</span><br>
+                    ${isOwner ? `<button class="btn" style="padding:5px 10px; font-size:0.6rem" onclick="removeFromMarket('${l.id}')">СНЯТЬ</button>` : `<button class="btn" style="padding:5px 10px; font-size:0.6rem" onclick="buyLot('${l.id}')">КУПИТЬ</button>`}`;
                 grid.appendChild(card);
             });
-        } catch(e) {}
+        } catch(e) { grid.innerHTML = "Ошибка связи"; }
+    }
+
+    async function listOnMarket(id) {
+        const idx = myItems.findIndex(i => i.id === id);
+        const price = prompt("Введите цену:");
+        if(!price || isNaN(price)) return;
+        const res = await fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "list_lot", lot: {...myItems[idx], marketPrice: price, ownerId: MY_ID, sellerName: tg.initDataUnsafe.user?.first_name || "Игрок"} }) });
+        if(res.ok) { myItems.splice(idx, 1); updateUI(); renderInv(); }
     }
 
     async function buyLot(id) {
-        try {
-            const res = await fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "buy_lot", id: id, user_id: MY_ID }) });
-            const data = await res.json();
-            if(res.ok) { coins = data.new_balance; myItems.push({id: Date.now(), name: data.item_name}); updateUI(); renderMarket(); }
-        } catch(e) {}
+        const res = await fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "buy_lot", id: id, user_id: MY_ID }) });
+        const data = await res.json();
+        if(res.ok) { coins = data.new_balance; myItems.push({id: Date.now(), name: data.item_name}); updateUI(); renderMarket(); } else { tg.showAlert(data.error); }
     }
 
     async function removeFromMarket(id) {
-        try {
-            const res = await fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "remove_lot", id: id, user_id: MY_ID }) });
-            if(res.ok) renderMarket();
-        } catch(e) {}
+        const res = await fetch(`${SERVER_URL}/market`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ action: "remove_lot", id: id, user_id: MY_ID }) });
+        if(res.ok) renderMarket();
     }
 
     initialLoad();
