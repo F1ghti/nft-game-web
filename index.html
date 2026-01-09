@@ -8,26 +8,33 @@
     <style>
         :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.08); }
         body { background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
-        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; z-index: 10; }
+        
+        /* Верхняя панель: только баланс слева */
+        .top-bar { width: 90%; display: flex; justify-content: flex-start; align-items: center; margin-top: 25px; z-index: 10; }
         .balance-box { background: var(--glass); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-weight: bold; }
+        
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
+        
         .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
         .roulette-line { display: flex; position: absolute; left: 0; }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
         .roulette-item img { width: 70px; }
+        
         .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; }
+        
+        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
+        
         .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; border: 1px solid var(--glass); z-index: 100; }
         .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; }
         .nav-item.active { opacity: 1; color: var(--primary); }
-        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; animation: modalPop 0.3s ease; }
-        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; }
+        
+        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         .drop-item { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; border-radius: 15px; border-left: 4px solid transparent; }
     </style>
 </head>
@@ -35,14 +42,13 @@
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">0</span></div>
-        <div id="u-name" style="font-weight: bold; color: var(--primary);">Загрузка...</div>
-    </div>
+        </div>
 
     <div id="screen-case" class="screen active">
         <div id="case-ui" style="text-align: center;">
-            <div onclick="showCaseContents()" style="cursor: pointer; position: relative;">
-                <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="160">
-                <p style="color: var(--primary); font-size: 12px; opacity: 0.6;">Нажми на кейс, чтобы посмотреть дроп</p>
+            <div onclick="showCaseContents()" style="cursor: pointer;">
+                <svg width="160" height="160" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>
+                <p style="color: var(--primary); font-size: 13px; margin-top: 15px;">Нажми на кейс, чтобы посмотреть дроп</p>
             </div>
         </div>
 
@@ -81,13 +87,14 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.ready(); tg.expand();
+    tg.ready();
+    tg.expand();
 
-    // ПРОВЕРЬ ЭТУ ССЫЛКУ! Она должна совпадать с Serveo
+    // !!! СЮДА ВСТАВЬ СВОЮ ССЫЛКУ ИЗ SERVEO !!!
     const SERVER_URL = "https://7ed2d1db5acd5a60-92-63-106-58.serveousercontent.com"; 
     
     let MY_ID = "test_user";
-    let MY_NAME = "Игрок";
+    let MY_NAME = "User";
     let coins = 0, myItems = [], pendingItem = null;
 
     const itemsConfig = {
@@ -97,27 +104,26 @@
     };
 
     async function loadData() {
-        // Ждем пока Telegram отдаст данные пользователя
-        if (!tg.initDataUnsafe?.user?.id) {
-            console.log("Ожидание Telegram ID...");
-            setTimeout(loadData, 1000);
-            return;
+        // Получаем ID пользователя Telegram
+        if (tg.initDataUnsafe?.user?.id) {
+            MY_ID = String(tg.initDataUnsafe.user.id);
+            MY_NAME = tg.initDataUnsafe.user.first_name || "User";
         }
-
-        MY_ID = String(tg.initDataUnsafe.user.id);
-        MY_NAME = tg.initDataUnsafe.user.first_name || "Игрок";
-        document.getElementById('u-name').innerText = MY_NAME;
 
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
+            if (!r.ok) throw new Error("Ошибка сервера");
             const d = await r.json();
+            
             if (d.balance !== undefined) {
                 coins = d.balance; 
                 myItems = d.inventory;
                 document.getElementById('coins').innerText = coins;
             }
         } catch (e) {
-            console.error("Ошибка API:", e);
+            console.error("Ошибка при загрузке данных:", e);
+            // Если сервер не отвечает, пробуем еще раз через 3 секунды
+            setTimeout(loadData, 3000);
         }
     }
 
@@ -135,8 +141,6 @@
 
     function startRoulette() {
         if (coins < 50) return alert("Недостаточно монет!");
-        coins -= 50; 
-        document.getElementById('coins').innerText = coins;
         
         const line = document.getElementById('roulette-line');
         document.getElementById('case-ui').style.display = 'none';
@@ -168,6 +172,10 @@
     }
 
     async function collectItem() {
+        // Уменьшаем баланс локально для скорости
+        coins -= 50;
+        document.getElementById('coins').innerText = coins;
+
         try {
             await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
                 method: 'POST',
@@ -179,15 +187,20 @@
             document.getElementById('case-ui').style.display = 'block';
             loadData();
         } catch (e) {
-            alert("Ошибка сохранения!");
+            alert("Ошибка сохранения на сервере!");
         }
     }
 
     function renderInv() {
-        document.getElementById('inv-grid').innerHTML = myItems.map(i => `
+        const grid = document.getElementById('inv-grid');
+        if (myItems.length === 0) {
+            grid.innerHTML = '<p style="grid-column: 1/3; opacity: 0.5;">Тут пока пусто...</p>';
+            return;
+        }
+        grid.innerHTML = myItems.map(i => `
             <div class="inv-card">
                 <img src="${itemsConfig[i.name].img}" width="50"><br><small>${i.name}</small><br>
-                <button onclick="sellBot(${i.id}, '${i.name}')" style="background:orange; border:none; border-radius:5px; margin-top:5px; font-size:10px; color:white; padding:5px;">БОТУ</button>
+                <button class="btn" onclick="sellBot(${i.id}, '${i.name}')" style="padding: 5px 10px; font-size: 10px; margin-top: 10px;">ПРОДАТЬ</button>
             </div>`).join('');
     }
 
@@ -203,31 +216,15 @@
         } catch (e) {}
     }
 
-    async function loadTop() {
-        try {
-            const r = await fetch(`${SERVER_URL}/market?action=top`);
-            const d = await r.json();
-            document.getElementById('top-list').innerHTML = d.map((p, i) => `
-                <div style="padding:10px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between;">
-                    <span>#${i+1} ${p.username}</span>
-                    <span style="color:gold;">${p.balance} 💰</span>
-                </div>`).join('');
-        } catch (e) {}
-    }
-
     function showScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
         el.classList.add('active');
         if(id==='inv') renderInv(); 
-        else if(id==='top') loadTop();
     }
 
-    // Запуск загрузки данных при старте
     loadData();
 </script>
 </body>
 </html>
-
-
