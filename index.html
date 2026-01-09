@@ -9,43 +9,50 @@
         :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.08); }
         body { background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         
+        /* Верхняя панель */
         .top-bar { width: 90%; display: flex; justify-content: flex-start; align-items: center; margin-top: 25px; z-index: 10; }
         .balance-box { background: var(--glass); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-weight: bold; }
         
+        /* Экраны */
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
         
+        /* Рулетка */
         .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
         .roulette-line { display: flex; position: absolute; left: 0; }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
         .roulette-item img { width: 70px; }
         
+        /* Списки и сетки */
         .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; scrollbar-width: none; }
         .scroll-area::-webkit-scrollbar { display: none; }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         
+        /* Кнопки */
         .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
+        /* Навигация */
         .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; border: 1px solid var(--glass); z-index: 100; }
         .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; transition: 0.2s; }
         .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.2); }
         
+        /* Модалки */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; }
         
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         .drop-item { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; border-radius: 15px; border-left: 4px solid transparent; }
         
-        #error-screen { display: flex; color: #ff4b4b; text-align: center; padding: 20px; flex-direction: column; align-items: center; justify-content: center; }
+        #error-screen { display: flex; color: #ff4b4b; text-align: center; padding: 20px; flex-direction: column; }
     </style>
 </head>
 <body>
 
     <div id="error-screen" class="screen active">
-        <h3 id="error-title">Загрузка профиля...</h3>
-        <p id="error-msg">Пожалуйста, подождите или откройте игру через бота.</p>
+        <h3 id="err-title">Загрузка данных...</h3>
+        <p id="err-msg">Пожалуйста, убедитесь, что бот запущен.</p>
     </div>
 
     <div id="game-content" style="display: none; width: 100%; height: 100%;">
@@ -70,7 +77,7 @@
 
         <div id="screen-inv" class="screen"><h2>🎒 РЮКЗАК</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
         <div id="screen-market" class="screen"><h2>⚖️ МАРКЕТ</h2><div class="scroll-area" id="market-list"></div></div>
-        <div id="screen-top" class="screen"><h2>🏆 ТОП ИГРОКОВ</h2><div class="scroll-area" id="top-list"></div></div>
+        <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
 
         <div class="nav-menu">
             <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
@@ -82,17 +89,16 @@
 
     <div id="case-modal" class="modal-overlay" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="color: var(--primary);">СОДЕРЖИМОЕ КЕЙСА</h3>
+            <h3 style="color: var(--primary);">В КЕЙСЕ:</h3>
             <div id="drop-list" style="max-height: 300px; overflow-y: auto;"></div>
-            <button class="btn" style="margin-top: 15px; width: 100%;" onclick="document.getElementById('case-modal').style.display='none'">ЗАКРЫТЬ</button>
         </div>
     </div>
 
     <div id="win-overlay" class="win-overlay">
-        <h2 style="color: gold;">ВЫПАЛО!</h2>
-        <img id="win-img" src="" width="160">
+        <h2 style="color: gold;">УРА!</h2>
+        <img id="win-img" src="" width="140">
         <h3 id="win-name"></h3>
-        <button class="btn" onclick="collectItem()" style="background:#00ff88; color:black;">ЗАБРАТЬ</button>
+        <button class="btn" onclick="collectItem()" style="background:#00ff88; color:black;">В ИНВЕНТАРЬ</button>
     </div>
 
 <script>
@@ -100,18 +106,17 @@
     tg.ready();
     tg.expand();
 
-    // ТВОЙ URL ИЗ SERVEO
+    // !!! ВАЖНО: ЗАМЕНИ НА СВОЙ АКТУАЛЬНЫЙ URL ИЗ SERVEO !!!
     const SERVER_URL = "https://df40ce8635b4c51b-92-63-106-58.serveousercontent.com"; 
     
-    let MY_ID = null;
-    let MY_NAME = "Игрок";
+    let MY_ID = null, MY_NAME = "Игрок";
     let coins = 0, myItems = [], marketItems = [], pendingItem = null;
     let isSpinning = false;
 
     // Заголовки для обхода защиты Serveo
-    const requestHeaders = {
+    const headers = { 
         'Content-Type': 'application/json',
-        'bypass-tunnel-reminder': 'true'
+        'bypass-tunnel-reminder': 'true' 
     };
 
     const itemsConfig = {
@@ -125,56 +130,87 @@
             MY_ID = String(tg.initDataUnsafe.user.id);
             MY_NAME = tg.initDataUnsafe.user.first_name || "User";
         } else {
-            document.getElementById('error-title').innerText = "Ошибка доступа";
-            document.getElementById('error-msg').innerText = "Запустите игру через бота.";
-            return; 
+            // Если открыто не в телеграм
+            MY_ID = "test_user"; 
         }
 
         try {
-            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`, {
-                headers: requestHeaders
-            });
-            
-            if (!r.ok) throw new Error(`Ошибка сервера: ${r.status}`);
-            
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`, { headers });
+            if (!r.ok) throw new Error("Сервер не отвечает");
             const d = await r.json();
             
-            if (d.balance !== undefined) {
-                coins = d.balance; 
-                myItems = d.inventory;
-                marketItems = d.market_items || [];
-                document.getElementById('coins').innerText = coins;
-                
-                document.getElementById('error-screen').style.display = 'none';
-                document.getElementById('game-content').style.display = 'block';
+            coins = d.balance; 
+            myItems = d.inventory;
+            marketItems = d.market_items || [];
+            
+            document.getElementById('coins').innerText = coins;
+            document.getElementById('error-screen').style.display = 'none';
+            document.getElementById('game-content').style.display = 'block';
 
-                const activeScreen = document.querySelector('.screen.active').id;
-                if(activeScreen === 'screen-inv') renderInv();
-                if(activeScreen === 'screen-market') renderMarket();
-                if(activeScreen === 'screen-top') renderTop();
-            }
-        } catch (e) { 
-            console.error(e);
-            document.getElementById('error-title').innerText = "Ошибка связи";
-            document.getElementById('error-msg').innerText = "Сервер недоступен. Проверьте туннель.";
+            // Обновляем текущий экран
+            const activeId = document.querySelector('.screen.active').id.replace('screen-', '');
+            updateUI(activeId);
+        } catch (e) {
+            document.getElementById('err-title').innerText = "Ошибка соединения";
+            document.getElementById('err-msg').innerText = "Проверьте запущен ли Python сервер и туннель.";
         }
     }
 
+    function updateUI(screenId) {
+        if(screenId === 'inv') renderInv();
+        if(screenId === 'market') renderMarket();
+        if(screenId === 'top') renderTop();
+    }
+
+    function renderInv() {
+        const grid = document.getElementById('inv-grid');
+        grid.innerHTML = myItems.map(i => {
+            let sellPrice = Math.floor(itemsConfig[i.name].price * 0.8);
+            return `<div class="inv-card">
+                <img src="${itemsConfig[i.name].img}" width="50"><br>
+                <small>${i.name}</small>
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+                    <button class="btn" onclick="sellBot(${i.id}, ${sellPrice})" style="padding:4px; font-size:10px; background:gray;">ПРОДАТЬ (${sellPrice})</button>
+                    <button class="btn" onclick="listMarket(${i.id}, '${i.name}')" style="padding:4px; font-size:10px;">НА МАРКЕТ</button>
+                </div>
+            </div>`;
+        }).join('') || '<p style="grid-column:1/3; opacity:0.5;">Тут пока пусто</p>';
+    }
+
+    function renderMarket() {
+        const list = document.getElementById('market-list');
+        list.innerHTML = marketItems.map(item => `
+            <div class="drop-item" style="justify-content: space-between; border-left-color: ${itemsConfig[item.name].color}">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="${itemsConfig[item.name].img}" width="35">
+                    <div style="text-align:left">
+                        <div style="font-weight:bold">${item.name}</div>
+                        <div style="color:#00ff88; font-size:12px;">${item.price} 💰</div>
+                    </div>
+                </div>
+                ${item.seller_id == MY_ID 
+                    ? `<button class="btn" onclick="cancelSale(${item.slot_id})" style="background:#ff4b4b; padding:6px; font-size:10px;">СНЯТЬ</button>`
+                    : `<button class="btn" onclick="buyMarket(${item.slot_id}, ${item.price})" style="background:#00ff88; color:black; padding:6px; font-size:10px;">КУПИТЬ</button>`
+                }
+            </div>`).join('') || '<p style="text-align:center; opacity:0.5;">Маркет пуст</p>';
+    }
+
     function renderTop() {
-        const list = document.getElementById('top-list');
-        list.innerHTML = `<div class="drop-item" style="border-left-color: gold">
-            <div style="font-weight:bold">1. ${MY_NAME} (Вы)</div>
+        document.getElementById('top-list').innerHTML = `<div class="drop-item" style="border-left-color: gold">
+            <div style="font-weight:bold">1. ${MY_NAME} (ВЫ)</div>
             <div style="color:#00ff88">${coins} 💰</div>
         </div>`;
     }
 
     function showCaseContents() {
-        if (isSpinning) return;
         const list = document.getElementById('drop-list');
         list.innerHTML = Object.entries(itemsConfig).map(([name, data]) => `
             <div class="drop-item" style="border-left-color: ${data.color}">
                 <img src="${data.img}" width="40">
-                <div style="text-align: left;"><div style="color:${data.color};font-weight:bold">${name}</div><small>Продажа: ${data.price} 💰</small></div>
+                <div style="text-align: left;">
+                    <div style="color:${data.color};font-weight:bold">${name}</div>
+                    <small>Мин. цена: ${data.price} 💰</small>
+                </div>
             </div>`).join('');
         document.getElementById('case-modal').style.display = 'flex';
     }
@@ -212,8 +248,7 @@
 
     async function collectItem() {
         await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
-            method: 'POST', 
-            headers: requestHeaders,
+            method: 'POST', headers,
             body: JSON.stringify({ item_name: pendingItem })
         });
         document.getElementById('win-overlay').style.display = 'none';
@@ -224,69 +259,36 @@
         loadData();
     }
 
-    function renderInv() {
-        const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? myItems.map(i => {
-            let botPrice = Math.floor(itemsConfig[i.name].price * 0.75);
-            return `<div class="inv-card">
-                <img src="${itemsConfig[i.name].img}" width="50"><br><small>${i.name}</small>
-                <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
-                    <button class="btn" onclick="sellBot(${i.id}, ${botPrice})" style="padding:5px; font-size:10px; background:gray;">БОТУ (${botPrice})</button>
-                    <button class="btn" onclick="listMarket(${i.id}, '${i.name}')" style="padding:5px; font-size:10px;">МАРКЕТ</button>
-                </div>
-            </div>`;
-        }).join('') : '<p style="grid-column:1/3; opacity:0.5;">Пусто</p>';
-    }
-
     async function sellBot(id, gain) {
-        if(!confirm("Продать боту?")) return;
         await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
-            method:'POST', headers: requestHeaders,
+            method:'POST', headers,
             body:JSON.stringify({item_db_id:id, gain:gain})
         });
         loadData();
     }
 
     async function listMarket(id, name) {
-        let price = prompt(`Цена для ${name}:`, itemsConfig[name].price);
-        if(!price || isNaN(price)) return;
+        let p = prompt("Введите цену продажи:", itemsConfig[name].price);
+        if(!p || isNaN(p)) return;
         await fetch(`${SERVER_URL}/market?action=list_on_market&user_id=${MY_ID}`, {
-            method:'POST', headers: requestHeaders,
-            body:JSON.stringify({item_db_id:id, price: parseInt(price), item_name: name})
-        });
-        loadData();
-    }
-
-    function renderMarket() {
-        const list = document.getElementById('market-list');
-        list.innerHTML = marketItems.length ? marketItems.map(item => `
-            <div class="drop-item" style="justify-content: space-between; border-left-color: ${itemsConfig[item.name].color}">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <img src="${itemsConfig[item.name].img}" width="35">
-                    <div style="text-align:left">
-                        <div style="font-weight:bold">${item.name}</div>
-                        <div style="color:#00ff88; font-size:12px;">${item.price} 💰</div>
-                    </div>
-                </div>
-                ${item.seller_id == MY_ID 
-                    ? `<button class="btn" onclick="cancelSale(${item.slot_id})" style="background:#ff4b4b; padding:8px 12px; font-size:10px;">СНЯТЬ</button>`
-                    : `<button class="btn" onclick="buyMarket(${item.slot_id}, ${item.price})" style="background:#00ff88; color:black; padding:8px 12px; font-size:10px;">КУПИТЬ</button>`
-                }
-            </div>`).join('') : '<p style="text-align:center; opacity:0.5;">Пусто</p>';
-    }
-
-    async function cancelSale(slotId) {
-        await fetch(`${SERVER_URL}/market?action=cancel_market&user_id=${MY_ID}`, {
-            method:'POST', headers: requestHeaders,
-            body:JSON.stringify({slot_id: slotId})
+            method:'POST', headers,
+            body:JSON.stringify({item_db_id:id, price: parseInt(p), item_name: name})
         });
         loadData();
     }
 
     async function buyMarket(slotId, price) {
-        if(coins < price) return alert("Мало монет!");
+        if(coins < price) return alert("Недостаточно монет!");
         await fetch(`${SERVER_URL}/market?action=buy_market&user_id=${MY_ID}`, {
-            method:'POST', headers: requestHeaders,
+            method:'POST', headers,
+            body:JSON.stringify({slot_id: slotId})
+        });
+        loadData();
+    }
+
+    async function cancelSale(slotId) {
+        await fetch(`${SERVER_URL}/market?action=cancel_market&user_id=${MY_ID}`, {
+            method:'POST', headers,
             body:JSON.stringify({slot_id: slotId})
         });
         loadData();
@@ -298,13 +300,11 @@
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
         el.classList.add('active');
-        if(id === 'inv') renderInv();
-        if(id === 'market') renderMarket();
-        if(id === 'top') renderTop();
+        updateUI(id);
     }
 
     loadData();
-    setInterval(loadData, 10000);
+    setInterval(loadData, 10000); // Автообновление каждые 10 сек
 </script>
 </body>
 </html>
