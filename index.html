@@ -15,13 +15,22 @@
             color: white; font-family: 'Segoe UI', sans-serif; margin: 0; 
             display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; 
         }
+
         .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; z-index: 10; }
         .balance-box { 
             background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; 
             border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88; min-width: 60px; text-align: center;
         }
+
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
+
+        /* ПРЕДПРОСМОТР КЕЙСА */
+        .case-preview { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; width: 90%; }
+        .preview-item { width: 60px; height: 60px; background: var(--glass); border-radius: 12px; display: flex; align-items: center; justify-content: center; border-bottom: 3px solid; }
+        .preview-item img { width: 40px; }
+
+        /* РУЛЕТКА */
         .roulette-wrapper {
             position: relative; width: 100%; height: 150px;
             display: none; margin: 20px 0; overflow: hidden;
@@ -31,13 +40,18 @@
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
         .roulette-item img { width: 80px; }
         .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; box-shadow: 0 0 15px #ff4444; }
+
+        /* ОКНО ВЫИГРЫША */
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; flex-direction: column; align-items: center; justify-content: center; }
-        .win-card { text-align: center; background: #1a1a2e; padding: 40px; border-radius: 30px; border: 2px solid var(--primary); }
+        .win-card { text-align: center; background: #1a1a2e; padding: 40px; border-radius: 30px; border: 2px solid var(--primary); width: 80%; }
+
         .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 15px 40px; border-radius: 20px; color: white; font-weight: bold; cursor: pointer; }
         .btn:disabled { opacity: 0.5; filter: grayscale(1); }
+
         .nav-menu { position: fixed; bottom: 25px; display: flex; gap: 50px; background: rgba(0,0,0,0.8); padding: 15px 40px; border-radius: 35px; backdrop-filter: blur(15px); border: 1px solid var(--glass); z-index: 100; }
         .nav-item { font-size: 1.8rem; cursor: pointer; opacity: 0.3; }
         .nav-item.active { opacity: 1; color: var(--primary); }
+
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-height: 65vh; overflow-y: auto; padding: 10px; }
         .inv-card { background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .inv-card img { width: 60px; }
@@ -51,11 +65,16 @@
     </div>
 
     <div id="screen-case" class="screen active">
-        <div id="case-ui"><img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="220"></div>
+        <div id="case-ui" style="text-align: center;">
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180">
+            <div class="case-preview" id="items-preview"></div>
+        </div>
+        
         <div class="roulette-wrapper" id="roulette-box">
             <div class="roulette-marker"></div>
             <div class="roulette-line" id="roulette-line"></div>
         </div>
+
         <h2 id="status" style="margin: 25px 0;">ЗАГРУЗКА...</h2>
         <button class="btn" id="roll-btn" onclick="startRoulette()" disabled>ОТКРЫТЬ (50)</button>
     </div>
@@ -82,8 +101,7 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    // !!! ЗАМЕНИ ЭТУ ССЫЛКУ НА СВОЮ ИЗ NGROK !!!
-    const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; 
+    const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; // ЗАМЕНИТЬ НА СВОЮ
     const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest';
 
     let coins = 0;
@@ -108,6 +126,7 @@
             document.getElementById('coins').innerText = coins;
             document.getElementById('status').innerText = "ГОТОВ К ОТКРЫТИЮ";
             document.getElementById('roll-btn').disabled = false;
+            renderPreview();
         } catch(e) {
             document.getElementById('status').innerText = "ОШИБКА СВЯЗИ";
             console.error(e);
@@ -125,8 +144,21 @@
         } catch(e) {}
     }
 
+    function renderPreview() {
+        const preview = document.getElementById('items-preview');
+        preview.innerHTML = '';
+        Object.keys(itemsConfig).forEach(key => {
+            const item = itemsConfig[key];
+            const div = document.createElement('div');
+            div.className = 'preview-item';
+            div.style.borderBottomColor = item.color;
+            div.innerHTML = `<img src="${item.img}">`;
+            preview.appendChild(div);
+        });
+    }
+
     function startRoulette() {
-        if (!isLoaded || coins < 50) return;
+        if (!isLoaded || coins < 50) { tg.showAlert("Нужно 50 монет!"); return; }
         coins -= 50; 
         document.getElementById('coins').innerText = coins;
         syncWithServer();
@@ -140,7 +172,7 @@
         btn.disabled = true;
         caseUI.style.display = 'none';
         box.style.display = 'block';
-        status.innerText = "КРУТИМ...";
+        status.innerText = "УДАЧИ...";
 
         line.innerHTML = '';
         line.style.transition = 'none';
@@ -185,8 +217,9 @@
     function collectItem() {
         if (pendingItem) {
             myItems.push({ id: Date.now().toString(), name: pendingItem });
-            pendingItem = null;
             localStorage.setItem('myItems', JSON.stringify(myItems));
+            pendingItem = null;
+            
             document.getElementById('win-overlay').style.display = 'none';
             document.getElementById('roulette-box').style.display = 'none';
             document.getElementById('case-ui').style.display = 'block';
@@ -198,13 +231,13 @@
 
     function renderInv() {
         const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p style='text-align:center; width:100%; grid-column: 1/3;'>Пусто</p>";
+        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.5; text-align:center;'>ПУСТО</p>";
         myItems.forEach((item, idx) => {
             const conf = itemsConfig[item.name];
             const card = document.createElement('div');
             card.className = 'inv-card';
             card.innerHTML = `<img src="${conf.img}"><br><b>${item.name}</b><br>
-            <button onclick="sellItem(${idx})" style="margin-top:10px; color:red; background:none; border:1px solid red; border-radius:10px; cursor:pointer;">ПРОДАТЬ ${conf.price}</button>`;
+            <button onclick="sellItem(${idx})" style="margin-top:10px; color:red; background:none; border:1px solid red; border-radius:10px; padding:5px; cursor:pointer;">ПРОДАТЬ ${conf.price}</button>`;
             grid.appendChild(card);
         });
     }
