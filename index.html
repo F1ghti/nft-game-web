@@ -12,9 +12,6 @@
         .balance-box { background: var(--glass); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-weight: bold; }
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
-        #case-preview { display: flex; gap: 10px; margin-top: 15px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 12px; cursor: pointer; transition: transform 0.2s; }
-        #case-preview:active { transform: scale(0.95); }
-        #case-preview img { width: 35px; opacity: 0.8; }
         .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
         .roulette-line { display: flex; position: absolute; left: 0; }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
@@ -28,10 +25,10 @@
         .nav-item.active { opacity: 1; color: var(--primary); }
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         
-        /* НОВЫЕ СТИЛИ ДЛЯ ПРОСМОТРА КЕЙСА */
+        /* Стили модального окна */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; animation: modalPop 0.3s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
-        @keyframes modalPop { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; animation: modalPop 0.3s ease; }
+        @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .drop-item { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; border-radius: 15px; border-left: 4px solid transparent; }
     </style>
 </head>
@@ -44,10 +41,13 @@
 
     <div id="screen-case" class="screen active">
         <div id="case-ui" style="text-align: center;">
-            <small style="color: var(--primary); opacity: 0.7;">Нажми на иконки, чтобы посмотреть дроп</small>
-            <div id="case-preview" onclick="showCaseContents()"></div>
-            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="130" style="margin-top: 10px;">
+            <div onclick="showCaseContents()" style="cursor: pointer; position: relative;">
+                <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="160">
+                <p style="color: var(--primary); font-size: 12px; opacity: 0.6;">Нажми на кейс, чтобы посмотреть дроп</p>
+            </div>
+            <div id="case-preview" style="display: none;"></div>
         </div>
+
         <div class="roulette-wrapper" id="roulette-box">
             <div style="position:absolute; left:50%; width:2px; height:100%; background:red; z-index:50; transform:translateX(-50%);"></div>
             <div class="roulette-line" id="roulette-line"></div>
@@ -61,9 +61,9 @@
 
     <div id="case-modal" class="modal-overlay" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="color: var(--primary); margin-top: 0;">СОДЕРЖИМОЕ КЕЙСА</h3>
+            <h3 style="color: var(--primary);">СОДЕРЖИМОЕ КЕЙСА</h3>
             <div id="drop-list" style="max-height: 300px; overflow-y: auto;"></div>
-            <button class="btn" style="margin-top: 20px; width: 100%;" onclick="document.getElementById('case-modal').style.display='none'">ПОНЯТНО</button>
+            <button class="btn" style="margin-top: 15px; width: 100%;" onclick="document.getElementById('case-modal').style.display='none'">ЗАКРЫТЬ</button>
         </div>
     </div>
 
@@ -83,14 +83,12 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.ready();
-    tg.expand();
+    tg.ready(); tg.expand();
 
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
     
     let MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : "test_user";
     let MY_NAME = tg.initDataUnsafe.user?.username || tg.initDataUnsafe.user?.first_name || "Игрок";
-    
     document.getElementById('u-name').innerText = MY_NAME;
 
     let coins = 0, myItems = [], pendingItem = null;
@@ -101,23 +99,14 @@
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    const preview = document.getElementById('case-preview');
-    Object.values(itemsConfig).forEach(i => { preview.innerHTML += `<img src="${i.img}">`; });
-
-    // НОВАЯ ФУНКЦИЯ ПРОСМОТРА КЕЙСА
     function showCaseContents() {
         const list = document.getElementById('drop-list');
         list.innerHTML = '';
         Object.entries(itemsConfig).forEach(([name, data]) => {
-            list.innerHTML += `
-                <div class="drop-item" style="border-left-color: ${data.color}">
-                    <img src="${data.img}" width="40">
-                    <div style="text-align: left;">
-                        <div style="color: ${data.color}; font-weight: bold;">${name}</div>
-                        <small style="opacity: 0.7;">Цена: ${data.price} 💰</small>
-                    </div>
-                </div>
-            `;
+            list.innerHTML += `<div class="drop-item" style="border-left-color: ${data.color}">
+                <img src="${data.img}" width="40">
+                <div style="text-align: left;"><div style="color:${data.color};font-weight:bold">${name}</div><small>Цена: ${data.price} 💰</small></div>
+            </div>`;
         });
         document.getElementById('case-modal').style.display = 'flex';
     }
