@@ -51,23 +51,20 @@
         .win-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 2000; flex-direction: column; align-items: center; justify-content: center;
-            animation: fadeIn 0.5s ease;
+            animation: fadeIn 0.4s ease;
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         .win-card {
-            text-align: center; background: rgba(255,255,255,0.05); padding: 40px; border-radius: 30px;
-            border: 2px solid var(--primary); box-shadow: 0 0 50px var(--primary);
-            transform: scale(0.8); animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            text-align: center; background: #1a1a2e; padding: 40px; border-radius: 30px;
+            border: 2px solid var(--primary); transform: scale(0.8); 
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         @keyframes pop { to { transform: scale(1); } }
 
         /* ИНВЕНТАРЬ */
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-height: 65vh; overflow-y: auto; padding: 10px; }
-        .inv-card { 
-            background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; 
-            border: 1px solid rgba(255,255,255,0.05);
-        }
+        .inv-card { background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .inv-card img { width: 60px; }
 
         .btn {
@@ -90,7 +87,7 @@
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div style="font-weight: 900; letter-spacing: 2px;">NFT COLLECTOR</div>
+        <div style="font-weight: 900; letter-spacing: 2px; font-size: 0.8rem;">NFT COLLECTOR</div>
     </div>
 
     <div id="screen-case" class="screen active">
@@ -108,12 +105,12 @@
     </div>
 
     <div id="win-overlay" class="win-overlay">
-        <div class="win-card">
-            <h1 style="margin: 0; color: gold;">ПОЗДРАВЛЯЕМ!</h1>
-            <p id="win-type" style="opacity: 0.7; margin: 10px 0;"></p>
-            <img id="win-img" src="" width="150" style="margin: 20px 0;">
-            <h2 id="win-name" style="margin-bottom: 30px;"></h2>
-            <button class="btn" onclick="collectItem()" style="width: 100%; background: #00ff88; color: black;">ЗАБРАТЬ В ИНВЕНТАРЬ</button>
+        <div class="win-card" id="win-card-box">
+            <h2 style="margin: 0; color: gold;">ВЫ ВЫИГРАЛИ!</h2>
+            <p id="win-type" style="opacity: 0.6; margin: 10px 0; font-weight: bold;"></p>
+            <img id="win-img" src="" width="150" style="margin: 20px 0; filter: drop-shadow(0 0 15px rgba(255,255,255,0.2));">
+            <h3 id="win-name" style="margin-bottom: 25px;"></h3>
+            <button class="btn" onclick="collectItem()" style="width: 100%; background: #00ff88; color: black;">ЗАБРАТЬ</button>
         </div>
     </div>
 
@@ -134,7 +131,7 @@
 
     let coins = 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
-    let pendingItem = null; // Предмет, который еще не забрали
+    let pendingItem = null; 
 
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20, rarity: "ОБЫЧНЫЙ" },
@@ -146,6 +143,16 @@
         document.getElementById('coins').innerText = coins;
         localStorage.setItem('myItems', JSON.stringify(myItems));
         syncWithServer();
+    }
+
+    async function syncWithServer() {
+        try {
+            await fetch(`${SERVER_URL}/market`, { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ action: "sync_balance", user_id: MY_ID, balance: coins }) 
+            });
+        } catch(e) { console.error("Sync error"); }
     }
 
     function startRoulette() {
@@ -161,7 +168,7 @@
         btn.disabled = true;
         caseUI.style.display = 'none';
         box.style.display = 'block';
-        status.innerText = "УДАЧИ...";
+        status.innerText = "КРУТИМ...";
 
         line.innerHTML = '';
         line.style.transition = 'none';
@@ -179,21 +186,20 @@
             line.appendChild(el);
         }
 
-        const winIdx = 50;
-        const winName = tape[winIdx];
-        pendingItem = winName; // Запоминаем, что выпало
+        const winIdx = 45; // Индекс победного предмета
+        pendingItem = tape[winIdx];
 
         setTimeout(() => {
             line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
-            const offset = (winIdx * 130) - (window.innerWidth / 2) + 65;
+            const itemWidth = 130;
+            const offset = (winIdx * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
             line.style.transform = `translateX(-${offset}px)`;
         }, 50);
 
-        // Показ окна выигрыша после остановки рулетки
         setTimeout(() => {
-            showWinOverlay(winName);
+            showWinOverlay(pendingItem);
             tg.HapticFeedback.notificationOccurred('success');
-        }, 5500);
+        }, 5600);
     }
 
     function showWinOverlay(name) {
@@ -203,10 +209,11 @@
         document.getElementById('win-name').style.color = item.color;
         document.getElementById('win-type').innerText = item.rarity;
         
-        const overlay = document.getElementById('win-overlay');
-        overlay.style.display = 'flex';
-        overlay.querySelector('.win-card').style.boxShadow = `0 0 50px ${item.color}`;
-        overlay.querySelector('.win-card').style.borderColor = item.color;
+        const cardBox = document.getElementById('win-card-box');
+        cardBox.style.boxShadow = `0 0 60px ${item.color}44`;
+        cardBox.style.borderColor = item.color;
+        
+        document.getElementById('win-overlay').style.display = 'flex';
     }
 
     function collectItem() {
@@ -215,7 +222,6 @@
             pendingItem = null;
             updateUI();
             
-            // Сбрасываем интерфейс
             document.getElementById('win-overlay').style.display = 'none';
             document.getElementById('roulette-box').style.display = 'none';
             document.getElementById('case-ui').style.display = 'block';
@@ -228,7 +234,7 @@
 
     function renderInv() {
         const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.5'>Пусто...</p>";
+        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.5; text-align:center'>Инвентарь пуст</p>";
         myItems.forEach((item, idx) => {
             const conf = itemsConfig[item.name];
             const card = document.createElement('div');
@@ -237,7 +243,7 @@
             card.innerHTML = `
                 <img src="${conf.img}"><br>
                 <b style="font-size:0.8rem">${item.name}</b><br>
-                <button onclick="sellItem(${idx})" style="background:none; border:1px solid #ff4444; color:#ff4444; border-radius:10px; padding:4px 8px; margin-top:8px; font-size:0.7rem;">ПРОДАТЬ ЗА ${conf.price}</button>
+                <button onclick="sellItem(${idx})" style="background:rgba(255,68,68,0.2); border:1px solid #ff4444; color:#ff4444; border-radius:10px; padding:5px 10px; margin-top:10px; font-size:0.7rem; cursor:pointer;">ПРОДАТЬ: ${conf.price}</button>
             `;
             grid.appendChild(card);
         });
@@ -250,19 +256,12 @@
         renderInv();
     }
 
-    async function syncWithServer() {
-        fetch(`${SERVER_URL}/market`, { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ action: "sync_balance", user_id: MY_ID, balance: coins }) 
-        }).catch(() => {});
-    }
-
     async function initialLoad() {
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`, { headers: {'ngrok-skip-browser-warning': 'true'} });
             const d = await r.json();
-            coins = d.balance; updateUI();
+            coins = d.balance;
+            updateUI();
         } catch(e) { updateUI(); }
     }
 
