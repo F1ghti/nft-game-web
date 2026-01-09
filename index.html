@@ -75,6 +75,7 @@
 
 <script>
     const tg = window.Telegram.WebApp;
+    // Сразу сообщаем Telegram, что мы готовы
     tg.ready();
     tg.expand();
 
@@ -91,27 +92,34 @@
     let MY_ID = null;
     let coins = 0, myInv = [], isSpinning = false;
 
-    function init() {
-        MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+    // Функция инициализации
+    async function initApp() {
         const log = document.getElementById("debug-log");
-
-        if (!MY_ID) {
-            log.innerText = "ОШИБКА: Зайдите через кнопку ИГРАТЬ в боте!";
-            log.style.color = "red";
-            return;
+        
+        // Пытаемся взять ID из разных мест Telegram
+        const user = tg.initDataUnsafe?.user;
+        
+        if (user && user.id) {
+            MY_ID = String(user.id);
+            log.innerText = "Авторизован: " + user.first_name + " (ID: " + MY_ID + ")";
+            log.style.color = "#00ff88";
+            await loadData();
+        } else {
+            // Если ID нет, пробуем подождать еще секунду
+            log.innerText = "Ожидание данных от Telegram... (Убедитесь, что зашли через кнопку)";
+            log.style.color = "orange";
+            setTimeout(initApp, 1000); 
         }
-
-        log.innerText = "ID: " + MY_ID + " | Связь установлена";
-        loadData();
     }
 
     async function loadData() {
+        if (!MY_ID) return;
         try {
             const r = await fetch(`${API_URL}?user_id=${MY_ID}`);
             const d = await r.json();
 
             if (d.error === "not_registered") {
-                document.body.innerHTML = "<h2 style='text-align:center;margin-top:100px'>📱 Подтвердите номер в боте!</h2>";
+                document.body.innerHTML = "<div style='text-align:center;padding:50px;'><h2>📱 Номер не подтвержден</h2><p>Вернитесь в бота и нажмите 'Подтвердить регистрацию'</p></div>";
                 return;
             }
 
@@ -119,91 +127,18 @@
             myInv = d.inventory || [];
             document.getElementById("coins").innerText = coins;
             renderInv();
-        } catch(e) { console.error(e); }
-    }
-
-    function renderInv() {
-        const grid = document.getElementById("invGrid");
-        grid.innerHTML = myInv.length ? "" : "<p style='grid-column:1/3'>ПУСТО</p>";
-        myInv.forEach((it, i) => {
-            grid.innerHTML += `<div class="card"><img src="${itemData[it.name].img}"><div style="font-size:10px">${it.name}</div><button class="small-btn" onclick="sellBot(${it.id},'${it.name}')">ПРОДАТЬ</button></div>`;
-        });
-    }
-
-    async function sellBot(id, name) {
-        const gain = Math.floor(itemData[name].price * 0.7);
-        await fetch(API_URL, { method:"POST", body: JSON.stringify({action:"sell_bot", user_id:MY_ID, item_id:id, gain:gain})});
-        loadData();
-    }
-
-    async function openCase() {
-        if (isSpinning || coins < 50) return;
-        isSpinning = true;
-        
-        const res = await fetch(API_URL, { method:"POST", body: JSON.stringify({action:"open_case", user_id:MY_ID}) }).then(r=>r.json());
-        if(res.error) { isSpinning = false; return; }
-
-        const keys = Object.keys(itemData);
-        const win = keys[Math.floor(Math.random()*keys.length)];
-        
-        const track = document.getElementById("track");
-        const staticImg = document.getElementById("caseStaticImg");
-        const roulette = document.getElementById("roulette");
-
-        staticImg.style.display = "none";
-        roulette.style.display = "block";
-        track.style.transition = "none";
-        track.style.transform = "translateX(0)";
-        track.innerHTML = "";
-
-        for (let i = 0; i < 60; i++) {
-            const name = (i === 55) ? win : keys[Math.floor(Math.random()*keys.length)];
-            track.innerHTML += `<div class="roulette-item"><img src="${itemData[name].img}"></div>`;
+        } catch(e) { 
+            document.getElementById("debug-log").innerText = "Ошибка сервера: проверьте ссылку туннеля";
         }
-
-        setTimeout(() => {
-            const targetPos = (55 * 120) + 60 - (roulette.offsetWidth / 2);
-            track.style.transition = "transform 5s cubic-bezier(0.15, 0, 0.15, 1)";
-            track.style.transform = `translateX(-${targetPos}px)`;
-        }, 50);
-
-        setTimeout(async () => {
-            await fetch(API_URL, { method:"POST", body: JSON.stringify({action:"add_item", user_id:MY_ID, item:win}) });
-            alert("Выпало: " + win);
-            isSpinning = false;
-            staticImg.style.display = "block";
-            roulette.style.display = "none";
-            loadData();
-        }, 5500);
     }
 
-    async function loadTop() {
-        const r = await fetch(`${API_URL}?action=top`).then(r=>r.json());
-        document.getElementById("topList").innerHTML = r.map((p,i)=>`<div class="item"><span>#${i+1} ${p.u}</span><b>${p.b}💰</b></div>`).join('');
-    }
+    // --- Остальные функции (renderInv, sellBot, openCase, loadTop, show) оставь из прошлого кода ---
+    // ... (копируй их сюда) ...
 
-    function show(id, el) {
-        document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-        document.querySelectorAll(".nav div").forEach(n=>n.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
-        el.classList.add("active");
-        if(id === 'top-screen') loadTop();
-    }
-
-    // Вместо setTimeout(init, 500); используй это:
-tg.onEvent('mainButtonClicked', function(){}); // фиктивный слушатель для активации
-
-if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    init(); 
-} else {
-    // Если данных нет сразу, ждем готовности WebApp
-    tg.ready();
-    // Повторная попытка через секунду, если Telegram тормозит
-    setTimeout(() => {
-        if (!MY_ID) init();
-    }, 1000);
-}
+    // Запускаем проверку немедленно
+    initApp();
 </script>
 </body>
 </html>
+
 
