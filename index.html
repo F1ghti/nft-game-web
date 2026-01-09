@@ -47,55 +47,55 @@
             box-shadow: 0 0 15px #ff4444;
         }
 
-        /* МОДАЛКА */
-        .modal {
+        /* ОКНО ВЫИГРЫША */
+        .win-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); z-index: 1000;
-            flex-direction: column; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.9); z-index: 2000; flex-direction: column; align-items: center; justify-content: center;
+            animation: fadeIn 0.5s ease;
         }
-        .modal-content {
-            background: #1a1a2e; padding: 25px; border-radius: 25px;
-            width: 80%; max-height: 70vh; overflow-y: auto; border: 1px solid var(--primary);
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .win-card {
+            text-align: center; background: rgba(255,255,255,0.05); padding: 40px; border-radius: 30px;
+            border: 2px solid var(--primary); box-shadow: 0 0 50px var(--primary);
+            transform: scale(0.8); animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
+        @keyframes pop { to { transform: scale(1); } }
 
+        /* ИНВЕНТАРЬ */
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-height: 65vh; overflow-y: auto; padding: 10px; }
         .inv-card { 
             background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; 
-            border: 1px solid rgba(255,255,255,0.05); transition: 0.3s;
+            border: 1px solid rgba(255,255,255,0.05);
         }
-        .inv-card img { width: 60px; filter: drop-shadow(0 0 5px rgba(0,0,0,0.5)); }
+        .inv-card img { width: 60px; }
 
         .btn {
             background: linear-gradient(135deg, var(--primary), var(--accent));
             border: none; padding: 15px 40px; border-radius: 20px;
-            color: white; font-weight: bold; cursor: pointer; transition: 0.2s;
+            color: white; font-weight: bold; cursor: pointer;
         }
-        .btn:active { transform: scale(0.95); }
-        .btn-sell { background: #eb4b4b; padding: 5px 10px; font-size: 0.7rem; margin-top: 8px; border-radius: 10px; }
-
-        .case-preview { width: 220px; cursor: pointer; transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .case-preview:hover { transform: scale(1.05); }
+        .btn:disabled { opacity: 0.5; filter: grayscale(1); }
 
         .nav-menu {
             position: fixed; bottom: 25px; display: flex; gap: 50px;
             background: rgba(0,0,0,0.8); padding: 15px 40px; border-radius: 35px;
             backdrop-filter: blur(15px); border: 1px solid var(--glass); z-index: 100;
         }
-        .nav-item { font-size: 1.8rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
-        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.2); }
+        .nav-item { font-size: 1.8rem; cursor: pointer; opacity: 0.3; }
+        .nav-item.active { opacity: 1; color: var(--primary); }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div style="font-weight: 900; letter-spacing: 2px; font-size: 0.8rem;">NFT COLLECTOR</div>
+        <div style="font-weight: 900; letter-spacing: 2px;">NFT COLLECTOR</div>
     </div>
 
     <div id="screen-case" class="screen active">
-        <div id="case-ui" style="text-align: center;">
-            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" class="case-preview" onclick="openPreview()">
-            <p style="font-size: 0.7rem; opacity: 0.5; margin-top: 10px;">НАЖМИ НА КЕЙС, ЧТОБЫ ПОСМОТРЕТЬ ПРИЗЫ</p>
+        <div id="case-ui">
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="220" style="cursor: pointer;">
         </div>
         
         <div class="roulette-wrapper" id="roulette-box">
@@ -103,21 +103,23 @@
             <div class="roulette-line" id="roulette-line"></div>
         </div>
 
-        <h2 id="status" style="margin: 25px 0; font-weight: 900; text-transform: uppercase;">ГОТОВ К ОТКРЫТИЮ</h2>
+        <h2 id="status" style="margin: 25px 0;">ГОТОВ К ОТКРЫТИЮ</h2>
         <button class="btn" id="roll-btn" onclick="startRoulette()">ОТКРЫТЬ (50)</button>
     </div>
 
-    <div id="screen-inv" class="screen">
-        <h2 style="margin-top: 80px;">🎒 МОЯ КОЛЛЕКЦИЯ</h2>
-        <div class="inv-grid" id="inv-grid"></div>
+    <div id="win-overlay" class="win-overlay">
+        <div class="win-card">
+            <h1 style="margin: 0; color: gold;">ПОЗДРАВЛЯЕМ!</h1>
+            <p id="win-type" style="opacity: 0.7; margin: 10px 0;"></p>
+            <img id="win-img" src="" width="150" style="margin: 20px 0;">
+            <h2 id="win-name" style="margin-bottom: 30px;"></h2>
+            <button class="btn" onclick="collectItem()" style="width: 100%; background: #00ff88; color: black;">ЗАБРАТЬ В ИНВЕНТАРЬ</button>
+        </div>
     </div>
 
-    <div id="preview-modal" class="modal" onclick="closeModal()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-            <h3 style="color:var(--primary); margin-top:0;">Возможные награды:</h3>
-            <div id="preview-list"></div>
-            <button class="btn" style="width:100%; margin-top:20px" onclick="closeModal()">ЗАКРЫТЬ</button>
-        </div>
+    <div id="screen-inv" class="screen">
+        <h2 style="margin-top: 80px;">🎒 КОЛЛЕКЦИЯ</h2>
+        <div class="inv-grid" id="inv-grid"></div>
     </div>
 
     <div class="nav-menu">
@@ -127,16 +129,17 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; // Оставляем для синхронизации баланса
+    const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; 
     const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest';
 
     let coins = 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
+    let pendingItem = null; // Предмет, который еще не забрали
 
     const itemsConfig = {
-        "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
-        "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100 },
-        "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
+        "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20, rarity: "ОБЫЧНЫЙ" },
+        "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100, rarity: "РЕДКИЙ" },
+        "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500, rarity: "ЛЕГЕНДАРНЫЙ" }
     };
 
     function updateUI() {
@@ -145,7 +148,6 @@
         syncWithServer();
     }
 
-    // РУЛЕТКА
     function startRoulette() {
         if (coins < 50) { tg.showAlert("Недостаточно монет!"); return; }
         coins -= 50; updateUI();
@@ -179,6 +181,7 @@
 
         const winIdx = 50;
         const winName = tape[winIdx];
+        pendingItem = winName; // Запоминаем, что выпало
 
         setTimeout(() => {
             line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
@@ -186,26 +189,46 @@
             line.style.transform = `translateX(-${offset}px)`;
         }, 50);
 
+        // Показ окна выигрыша после остановки рулетки
         setTimeout(() => {
-            status.innerText = winName;
-            status.style.color = itemsConfig[winName].color;
-            myItems.push({ id: Date.now().toString(), name: winName });
-            updateUI();
-            btn.disabled = false;
+            showWinOverlay(winName);
             tg.HapticFeedback.notificationOccurred('success');
-            
-            setTimeout(() => {
-                box.style.display = 'none';
-                caseUI.style.display = 'block';
-                status.innerText = "ГОТОВ К ОТКРЫТИЮ";
-                status.style.color = "white";
-            }, 3000);
         }, 5500);
+    }
+
+    function showWinOverlay(name) {
+        const item = itemsConfig[name];
+        document.getElementById('win-img').src = item.img;
+        document.getElementById('win-name').innerText = name;
+        document.getElementById('win-name').style.color = item.color;
+        document.getElementById('win-type').innerText = item.rarity;
+        
+        const overlay = document.getElementById('win-overlay');
+        overlay.style.display = 'flex';
+        overlay.querySelector('.win-card').style.boxShadow = `0 0 50px ${item.color}`;
+        overlay.querySelector('.win-card').style.borderColor = item.color;
+    }
+
+    function collectItem() {
+        if (pendingItem) {
+            myItems.push({ id: Date.now().toString(), name: pendingItem });
+            pendingItem = null;
+            updateUI();
+            
+            // Сбрасываем интерфейс
+            document.getElementById('win-overlay').style.display = 'none';
+            document.getElementById('roulette-box').style.display = 'none';
+            document.getElementById('case-ui').style.display = 'block';
+            document.getElementById('status').innerText = "ГОТОВ К ОТКРЫТИЮ";
+            document.getElementById('roll-btn').disabled = false;
+            
+            tg.HapticFeedback.impactOccurred('medium');
+        }
     }
 
     function renderInv() {
         const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.5'>Тут пока пусто...</p>";
+        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.5'>Пусто...</p>";
         myItems.forEach((item, idx) => {
             const conf = itemsConfig[item.name];
             const card = document.createElement('div');
@@ -214,20 +237,17 @@
             card.innerHTML = `
                 <img src="${conf.img}"><br>
                 <b style="font-size:0.8rem">${item.name}</b><br>
-                <button class="btn btn-sell" onclick="sellItem(${idx})">ПРОДАТЬ ЗА ${conf.price}</button>
+                <button onclick="sellItem(${idx})" style="background:none; border:1px solid #ff4444; color:#ff4444; border-radius:10px; padding:4px 8px; margin-top:8px; font-size:0.7rem;">ПРОДАТЬ ЗА ${conf.price}</button>
             `;
             grid.appendChild(card);
         });
     }
 
     function sellItem(index) {
-        const item = myItems[index];
-        const price = itemsConfig[item.name].price;
-        coins += price;
+        coins += itemsConfig[myItems[index].name].price;
         myItems.splice(index, 1);
         updateUI();
         renderInv();
-        tg.HapticFeedback.impactOccurred('light');
     }
 
     async function syncWithServer() {
@@ -242,8 +262,7 @@
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`, { headers: {'ngrok-skip-browser-warning': 'true'} });
             const d = await r.json();
-            coins = d.balance; 
-            updateUI();
+            coins = d.balance; updateUI();
         } catch(e) { updateUI(); }
     }
 
@@ -254,24 +273,6 @@
         el.classList.add('active');
         if(id === 'inv') renderInv();
     }
-
-    function openPreview() {
-        const l = document.getElementById('preview-list');
-        l.innerHTML = '';
-        Object.keys(itemsConfig).forEach(k => {
-            const item = itemsConfig[k];
-            l.innerHTML += `
-                <div style="display:flex;align-items:center;margin:10px 0;padding:12px;background:rgba(255,255,255,0.05);border-radius:15px;border-left:4px solid ${item.color}">
-                    <img src="${item.img}" width="40" style="margin-right:15px">
-                    <div>
-                        <b style="color:${item.color}">${k}</b><br>
-                        <small style="opacity:0.6">Стоимость: 💰 ${item.price}</small>
-                    </div>
-                </div>`;
-        });
-        document.getElementById('preview-modal').style.display = 'flex';
-    }
-    function closeModal() { document.getElementById('preview-modal').style.display = 'none'; }
 
     initialLoad();
 </script>
