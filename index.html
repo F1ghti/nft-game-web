@@ -129,11 +129,24 @@ body{
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-const SERVER_URL = "https://41ce26c1ca617b9a-92-63-106-58.serveousercontent.com";
+const SERVER_URL = "https://41ce26c1ca617b9a-92-63-106-58.serveousercontent.com"; // Убедись, что адрес Serveo актуален
 const API_URL = SERVER_URL + "/api";
 
-const MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : "12345";
+// СТРОГОЕ ПОЛУЧЕНИЕ ID (без 12345)
+const MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
 const MY_NAME = tg.initDataUnsafe?.user?.first_name || "Guest";
+
+// Если зашли просто через браузер - блокируем
+if (!MY_ID) {
+    document.body.innerHTML = `
+        <div style="text-align:center; color:white; margin-top:100px; padding:20px; font-family:sans-serif;">
+            <h2 style="color:#ff4444;">🛑 ОШИБКА ДОСТУПА</h2>
+            <p>Игра доступна только через официального бота Telegram.</p>
+            <br>
+            <a href="https://t.me/ТВОЙ_БОТ_USERNAME" style="color:#00d2ff; text-decoration:none; border:1px solid; padding:10px; border-radius:10px;">ВЕРНУТЬСЯ В БОТА</a>
+        </div>`;
+    throw new Error("Unauthorized access"); 
+}
 
 const itemData = {
  "Common Bot": {img:"https://cdn-icons-png.flaticon.com/512/4712/4712139.png",price:20},
@@ -152,21 +165,36 @@ async function apiRequest(data){
     }).then(r=>r.json());
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ
 async function loadData(){
  try {
     const url = `${API_URL}?user_id=${MY_ID}`;
     const r = await fetch(url);
     const d = await r.json();
 
+    // Если сервер говорит, что номера телефона нет в базе
     if (d.error === "not_registered") {
         document.body.innerHTML = `
-            <div style="text-align:center; color:white; margin-top:100px; padding:20px;">
+            <div style="text-align:center; color:white; margin-top:100px; padding:20px; font-family:sans-serif;">
                 <h2>📱 Нужна верификация</h2>
-                <p>Ваш аккаунт не подтвержден. Вернитесь в бота и отправьте номер телефона.</p>
-                <button class="btn" onclick="window.location.reload()">Я ПОДТВЕРДИЛ</button>
+                <p>Ваш аккаунт не подтвержден в боте.</p>
+                <p>Вернитесь в бота и отправьте номер телефона.</p>
+                <button class="btn" style="margin-top:20px;" onclick="window.location.reload()">Я ПОДТВЕРДИЛ</button>
             </div>`;
         return;
     }
+    
+    // Если всё хорошо - обновляем данные на экране
+    coins = d.balance;
+    myInv = d.inventory;
+    document.getElementById("coins").innerText = coins;
+    renderInv();
+
+ } catch(e) { 
+    console.error("Ошибка загрузки:", e); 
+    document.getElementById("status").innerText = "ОШИБКА СВЯЗИ";
+ }
+}
     
     // ... остальной код отрисовки ...
  } catch(e) { console.error(e); }
@@ -329,5 +357,6 @@ loadData();
 </script>
 </body>
 </html>
+
 
 
