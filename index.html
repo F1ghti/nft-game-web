@@ -106,24 +106,31 @@ async function apiRequest(data){
 
 async function loadData(){
  try {
-    const r = await fetch(`${API_URL}?user_id=${MY_ID}`);
+    const url = `${API_URL}?user_id=${MY_ID}`;
+    console.log("Запрашиваю данные для ID:", MY_ID);
+    
+    const r = await fetch(url);
     const d = await r.json();
+
+    // Если сервер прислал ошибку (например, пользователя нет в базе)
+    if (d.error) {
+        console.warn("Сервер ответил ошибкой:", d.error);
+        document.getElementById("coins").innerText = "Регистрация...";
+        // Если пользователя нет, пробуем его "создать" через простой запрос (опционально)
+        return;
+    }
+
+    // Если всё ок, обновляем цифры
     coins = d.balance; 
-    myInv = d.inventory;
+    myInv = d.inventory || [];
     document.getElementById("coins").innerText = coins;
+    
     if(document.getElementById("inv").classList.contains("active")) renderInv();
- } catch(e) { console.error("Ошибка загрузки данных", e); }
+ } catch(e) { 
+    console.error("Критическая ошибка сети:", e);
+    document.getElementById("coins").innerText = "Ошибка сети";
+ }
 }
-
-function openCasePreview(){
-    const listEl = document.getElementById("caseItems");
-    listEl.innerHTML="";
-    Object.keys(itemData).forEach(i=>{
-        listEl.innerHTML+=`<div>• ${i} (${itemData[i].price}💰)</div>`;
-    });
-    document.getElementById("casePreview").style.display="flex";
-}
-
 function closePreview(){ document.getElementById("casePreview").style.display="none"; }
 
 async function openCase(){
@@ -216,3 +223,4 @@ loadData();
 </script>
 </body>
 </html>
+
