@@ -8,18 +8,24 @@
     <style>
         :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.1); }
         body { background: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        
         .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; z-index: 10; }
         .balance-box { background: var(--glass); padding: 10px 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); font-weight: bold; color: #00ff88; }
+        
         .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 20px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 25px; backdrop-filter: blur(15px); border: 1px solid var(--glass); z-index: 100; }
         .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.5; transition: 0.3s; }
         .nav-item.active { opacity: 1; transform: scale(1.2); color: var(--primary); }
+
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
+
         .inv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-height: 65vh; overflow-y: auto; padding: 10px; }
         .inv-card { background: var(--glass); padding: 15px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); text-align: center; font-size: 0.8rem; position: relative; border: 2px solid transparent; }
         .inv-card img { width: 60px; margin-bottom: 5px; }
+        
         .sell-btn { background: #ff4444; border: none; color: white; padding: 8px; border-radius: 8px; margin-top: 5px; width: 100%; font-size: 0.7rem; font-weight: bold; cursor: pointer; }
         .market-btn { background: var(--primary); }
+
         .btn { background: linear-gradient(90deg, var(--primary), var(--accent)); border: none; padding: 15px 40px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
         .case-img { width: 200px; z-index: 2; transition: 0.3s; }
         .spinning { animation: shake 0.5s infinite ease-in-out; }
@@ -62,10 +68,10 @@
     // ССЫЛКА НА ТВОЙ СЕРВЕР (обновляй после перезапуска ngrok)
     const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; 
 
-    // Генерация ID для тестов вне Telegram, чтобы игроки не пересекались
+    // Генерация уникального ID для сессии
     const fallbackId = 'guest_' + Math.random().toString(36).substr(2, 9);
     const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : fallbackId;
-    console.log("Ваш уникальный ID:", MY_ID);
+    console.log("Ваш ID:", MY_ID);
 
     let coins = parseInt(localStorage.getItem('coins')) || 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
@@ -109,7 +115,7 @@
             img.src = win.img;
             status.innerText = winName;
             status.style.color = win.color;
-            myItems.push({ id: Date.now().toString(), name: winName });
+            myItems.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), name: winName });
             updateUI();
             btn.disabled = false;
             tg.HapticFeedback.notificationOccurred('success');
@@ -139,7 +145,7 @@
             if(response.ok) {
                 myItems.splice(idx, 1);
                 updateUI(); renderInv();
-                tg.showAlert("✅ Выставлено на маркет!");
+                tg.showAlert("✅ Выставлено!");
             }
         } catch (e) { tg.showAlert("❌ Ошибка сервера"); }
     }
@@ -149,11 +155,7 @@
             const response = await fetch(`${SERVER_URL}/market`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    action: "remove_lot", 
-                    id: String(id), 
-                    user_id: MY_ID 
-                })
+                body: JSON.stringify({ action: "remove_lot", id: String(id), user_id: MY_ID })
             });
 
             if(response.ok) {
@@ -162,13 +164,46 @@
                     myItems.push({ id: lot.id, name: lot.name });
                     updateUI();
                 }
-                tg.showAlert("📦 Предмет возвращен!");
+                tg.showAlert("📦 Предмет вернулся!");
                 renderMarket();
-            } else {
-                const err = await response.json();
-                tg.showAlert("❌ " + err.error);
             }
         } catch (e) { tg.showAlert("❌ Ошибка связи"); }
+    }
+
+    async function buyLot(id) {
+        const lot = marketLots.find(l => String(l.id) === String(id));
+        if (!lot) return;
+
+        if (coins < lot.marketPrice) {
+            tg.showAlert("❌ Недостаточно монет!");
+            return;
+        }
+
+        if (!confirm(`Купить ${lot.name} за ${lot.marketPrice}?`)) return;
+
+        try {
+            const response = await fetch(`${SERVER_URL}/market`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    action: "buy_lot", 
+                    id: String(id), 
+                    buyer_balance: coins 
+                })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                coins -= data.price;
+                myItems.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), name: data.item_name });
+                updateUI();
+                renderMarket();
+                tg.showAlert(`✅ Куплено: ${data.item_name}`);
+                tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                tg.showAlert("❌ " + data.error);
+            }
+        } catch (e) { tg.showAlert("❌ Ошибка при покупке"); }
     }
 
     function renderInv() {
@@ -197,7 +232,6 @@
                 const conf = itemsConfig[l.name];
                 const card = document.createElement('div');
                 card.className = 'inv-card';
-                
                 const isOwner = String(l.ownerId) === String(MY_ID);
                 card.style.borderColor = isOwner ? "#00ff88" : "rgba(255,255,255,0.1)";
 
@@ -208,7 +242,7 @@
                     <span style="color:#00ff88">💰 ${l.marketPrice}</span>
                     ${isOwner ? 
                         `<button class="sell-btn" onclick="removeFromMarket('${l.id}')">СНЯТЬ</button>` : 
-                        `<button class="sell-btn market-btn" onclick="tg.showAlert('Покупка будет в обновлении')">КУПИТЬ</button>`
+                        `<button class="sell-btn market-btn" onclick="buyLot('${l.id}')">КУПИТЬ</button>`
                     }`;
                 grid.appendChild(card);
             });
