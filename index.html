@@ -3,94 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Case Opener</title>
+    <title>NFT Case Deluxe</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { background: #0f0f0f; color: white; font-family: sans-serif; text-align: center; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-        
-        /* Стили кейса */
-        .case-container { width: 280px; height: 280px; background: #1a1a1a; border: 3px solid #0088cc; border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; position: relative; overflow: hidden; }
-        .nft-image { width: 80%; height: 80%; object-fit: contain; transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        
-        .status { font-size: 1.2rem; margin-bottom: 20px; color: #aaa; }
-        .win-name { font-weight: bold; color: #ffcc00; height: 1.5rem; margin-top: 10px; }
+        :root {
+            --primary: #00d2ff;
+            --accent: #9d50bb;
+            --bg: #050505;
+        }
 
-        button { background: #0088cc; color: white; border: none; padding: 15px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:disabled { background: #333; color: #777; }
-        
-        .balance { position: absolute; top: 20px; font-size: 1.5rem; color: #00ff88; }
+        body {
+            background: var(--bg);
+            background: radial-gradient(circle at center, #1a1a2e 0%, #050505 100%);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Анимация появления контента */
+        .fade-in { animation: fadeIn 0.8s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Окно обновлений */
+        #update-modal {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center; z-index: 100;
+        }
+        .modal-content {
+            background: linear-gradient(135deg, #2c3e50, #000);
+            padding: 30px; border-radius: 24px; border: 1px solid var(--primary);
+            width: 80%; text-align: center;
+        }
+
+        /* Баланс */
+        .balance-card {
+            margin-top: 20px; padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50px; border: 1px solid rgba(255,255,255,0.1);
+            font-weight: bold; color: #00ff88;
+        }
+
+        /* Рулетка / Кейс */
+        .case-scene {
+            position: relative; margin-top: 50px;
+            width: 250px; height: 250px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .glow {
+            position: absolute; width: 100%; height: 100%;
+            background: var(--primary); filter: blur(80px); opacity: 0.2;
+            border-radius: 50%;
+        }
+        .nft-display {
+            width: 200px; height: 200px; object-fit: contain;
+            z-index: 2; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* Эффект прокрутки */
+        .spinning { animation: spin 0.2s infinite linear; }
+        @keyframes spin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(180deg); } }
+
+        /* Кнопка */
+        .main-btn {
+            margin-top: 40px; background: linear-gradient(90deg, var(--primary), var(--accent));
+            border: none; padding: 18px 50px; border-radius: 15px;
+            color: white; font-weight: 800; font-size: 1.1rem;
+            box-shadow: 0 10px 20px rgba(0, 210, 255, 0.3); cursor: pointer;
+        }
     </style>
 </head>
-<body>
+<body class="fade-in">
 
-    <div class="balance">💰 <span id="coins">0</span></div>
-
-    <div class="case-container" id="case">
-        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" id="nft-display" class="nft-image">
+    <div id="update-modal">
+        <div class="modal-content">
+            <h2>🚀 ОБНОВЛЕНИЕ 1.1</h2>
+            <ul style="text-align: left; line-height: 1.6;">
+                <li>💎 Добавлена система NFT Кейсов</li>
+                <li>🎨 Новый детализированный UI</li>
+                <li>⚡️ Улучшена плавность анимаций</li>
+                <li>💾 Авто-сохранение в базу бота</li>
+            </ul>
+            <button class="main-btn" onclick="closeModal()">ПОЕХАЛИ!</button>
+        </div>
     </div>
 
-    <div class="win-name" id="win-name">Нажми "Открыть"</div>
-    <p class="status">Стоимость: 50 монет</p>
+    <div class="balance-card">💰 <span id="coins">1000</span> COINS</div>
 
-    <button id="open-btn" onclick="openCase()">ОТКРЫТЬ КЕЙС</button>
+    <div class="case-scene">
+        <div class="glow" id="glow-effect"></div>
+        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" id="nft-img" class="nft-display">
+    </div>
+
+    <h2 id="nft-name" style="margin-top: 20px; text-shadow: 0 0 10px rgba(255,255,255,0.5);">ГОТОВ К ПРОКРУТКЕ?</h2>
+
+    <button class="main-btn" id="roll-btn" onclick="startRoll()">ОТКРЫТЬ КЕЙС</button>
 
     <script>
         const tg = window.Telegram.WebApp;
-        let balance = 1000; // Начальный баланс для теста
-        document.getElementById('coins').innerText = balance;
+        tg.expand();
 
-        // Временные NFT (заменим на твои позже)
         const nfts = [
-            { name: "Common NFT", img: "https://cdn-icons-png.flaticon.com/512/9306/9306630.png", chance: 0.6 },
-            { name: "Rare Cyber Punk", img: "https://cdn-icons-png.flaticon.com/512/9306/9306622.png", chance: 0.3 },
-            { name: "LEGENDARY APE", img: "https://cdn-icons-png.flaticon.com/512/9306/9306614.png", chance: 0.1 }
+            { name: "COMMON BOT", img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
+            { name: "RARE CYBER", img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#9d50bb" },
+            { name: "ULTRA LEGEND", img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#ffcc00" }
         ];
 
-        function openCase() {
-            if (balance < 50) {
-                tg.showAlert("Недостаточно монет!");
-                return;
-            }
+        function closeModal() {
+            document.getElementById('update-modal').style.display = 'none';
+            tg.HapticFeedback.impactOccurred('light');
+        }
 
-            balance -= 50;
-            document.getElementById('coins').innerText = balance;
-            
-            const btn = document.getElementById('open-btn');
-            const display = document.getElementById('nft-display');
-            const nameLabel = document.getElementById('win-name');
+        function startRoll() {
+            const btn = document.getElementById('roll-btn');
+            const img = document.getElementById('nft-img');
+            const name = document.getElementById('nft-name');
+            const glow = document.getElementById('glow-effect');
 
             btn.disabled = true;
-            nameLabel.innerText = "Открываем...";
+            img.classList.add('spinning');
+            name.innerText = "КРУТИМ...";
+            
             tg.HapticFeedback.notificationOccurred('warning');
 
-            // Анимация крутилки (имитация)
-            let timer = 0;
-            let interval = setInterval(() => {
-                const randomNft = nfts[Math.floor(Math.random() * nfts.length)];
-                display.src = randomNft.img;
-                timer += 100;
-                if (timer >= 2000) {
-                    clearInterval(interval);
-                    finalizeWin();
-                }
-            }, 100);
-
-            function finalizeWin() {
-                // Логика шансов
-                const rand = Math.random();
-                let win;
-                if (rand < 0.1) win = nfts[2];      // 10% легендарка
-                else if (rand < 0.4) win = nfts[1]; // 30% рарка
-                else win = nfts[0];                // остальные 60%
-
-                display.src = win.img;
-                nameLabel.innerText = `ВЫБИТО: ${win.name}`;
+            // Имитация прокрутки 2.5 секунды
+            setTimeout(() => {
+                img.classList.remove('spinning');
+                const win = nfts[Math.floor(Math.random() * nfts.length)];
+                
+                img.src = win.img;
+                name.innerText = win.name;
+                name.style.color = win.color;
+                glow.style.background = win.color;
+                glow.style.opacity = "0.6";
+                
                 btn.disabled = false;
                 tg.HapticFeedback.notificationOccurred('success');
                 
-                // Отправляем результат боту (название NFT)
-                tg.sendData(`Выбит: ${win.name}`);
-            }
+                // Через 2 секунды предлагаем сохранить
+                setTimeout(() => {
+                    if(confirm(`Выбили ${win.name}! Сохранить в инвентарь?`)) {
+                        tg.sendData(`ВЫБИТО: ${win.name}`);
+                    }
+                }, 500);
+            }, 2500);
         }
     </script>
 </body>
