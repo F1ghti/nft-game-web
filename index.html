@@ -81,7 +81,6 @@
     tg.expand();
 
     // --- НАСТРОЙКА СЕРВЕРА ---
-    // Убедись, что ссылка совпадает с той, что выдает ngrok
     const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; 
 
     let coins = parseInt(localStorage.getItem('coins')) || 1000;
@@ -150,10 +149,13 @@
         const price = prompt("Ваша цена:", itemsConfig[item.name].price);
         if(!price || isNaN(price) || price <= 0) return;
 
+        // Важно: Принудительно делаем ID владельца строкой
+        const ownerIdStr = String(tg.initDataUnsafe.user?.id || 123);
+
         const lot = { 
             ...item, 
             marketPrice: parseInt(price), 
-            ownerId: String(tg.initDataUnsafe.user?.id || 123),
+            ownerId: ownerIdStr,
             sellerName: tg.initDataUnsafe.user?.first_name || "Игрок"
         };
 
@@ -175,7 +177,6 @@
         }
     }
 
-    // ИСПРАВЛЕННАЯ ФУНКЦИЯ СНЯТИЯ С ВОЗВРАТОМ
     async function removeFromMarket(id) {
         const userId = String(tg.initDataUnsafe.user?.id || 123);
         
@@ -191,16 +192,13 @@
             });
 
             if(response.ok) {
-                // 1. Находим лот в локальном массиве marketLots, чтобы знать его имя
                 const lot = marketLots.find(l => String(l.id) === String(id));
                 if (lot) {
-                    // 2. Возвращаем в рюкзак
                     myItems.push({ id: lot.id, name: lot.name });
                     updateUI();
                 }
-                
                 tg.showAlert("📦 Предмет вернулся в инвентарь!");
-                renderMarket(); // Перерисовываем маркет
+                renderMarket(); 
             } else {
                 const data = await response.json();
                 tg.showAlert("❌ " + (data.error || "Ошибка"));
@@ -234,25 +232,30 @@
             marketLots = await resp.json();
             
             grid.innerHTML = marketLots.length ? "" : "Лотов пока нет";
-            const uid = String(tg.initDataUnsafe.user?.id || 123);
             
+            // ПРИНУДИТЕЛЬНО ПРИВОДИМ ТЕКУЩИЙ ID К СТРОКЕ
+            const currentUserId = String(tg.initDataUnsafe.user?.id || 123);
+            console.log("Ваш ID:", currentUserId); // Для отладки
+
             marketLots.forEach(l => {
                 const conf = itemsConfig[l.name];
                 const card = document.createElement('div');
                 card.className = 'inv-card';
                 
-                // Проверяем владельца строго через строки
-                const isOwner = String(l.ownerId) === uid;
+                // ПРИНУДИТЕЛЬНО ПРИВОДИМ ID ВЛАДЕЛЬЦА К СТРОКЕ ПЕРЕД СРАВНЕНИЕМ
+                const ownerId = String(l.ownerId);
+                const isOwner = (ownerId === currentUserId);
+
                 card.style.borderColor = isOwner ? "#00ff88" : conf.color;
                 
                 card.innerHTML = `
                     <img src="${conf.img}"><br>
-                    <small>${isOwner ? "ВАШ ЛОТ" : (l.sellerName || "Игрок")}</small><br>
+                    <small>${isOwner ? "⭐ ВАШ ЛОТ" : (l.sellerName || "Игрок")}</small><br>
                     <b>${l.name}</b><br>
                     <span style="color:#00ff88">💰 ${l.marketPrice}</span>
                     ${isOwner ? 
                         `<button class="sell-btn" onclick="removeFromMarket('${l.id}')">СНЯТЬ</button>` : 
-                        `<button class="sell-btn market-btn" onclick="tg.showAlert('Покупка будет в обновлении!')">КУПИТЬ</button>`
+                        `<button class="sell-btn market-btn" onclick="tg.showAlert('Вы не можете снять чужой лот!')">КУПИТЬ</button>`
                     }`;
                 grid.appendChild(card);
             });
