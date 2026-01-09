@@ -66,78 +66,113 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+    tg.enableClosingConfirmation(); // Спросит перед выходом, чтобы случайно не закрыть
 
-        // Загрузка данных из памяти браузера
-        let coins = parseInt(localStorage.getItem('coins')) || 1000;
-        let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
+    // 1. Загрузка данных (если их нет, ставим стандартные)
+    let coins = parseInt(localStorage.getItem('coins'));
+    if (isNaN(coins)) coins = 1000;
 
-        const items = [
-            { name: "Common Bot", img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
-            { name: "Rare Cyber", img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#9d50bb" },
-            { name: "Ultra Legend", img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#ffcc00" }
-        ];
+    let myItems = [];
+    try {
+        const savedItems = localStorage.getItem('myItems');
+        myItems = savedItems ? JSON.parse(savedItems) : [];
+    } catch (e) {
+        myItems = [];
+    }
 
-        function updateUI() {
-            document.getElementById('coins').innerText = coins;
-            localStorage.setItem('coins', coins);
-            localStorage.setItem('myItems', JSON.stringify(myItems));
+    const items = [
+        { name: "Common Bot", img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#00d2ff" },
+        { name: "Rare Cyber", img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#9d50bb" },
+        { name: "Ultra Legend", img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#ffcc00" }
+    ];
+
+    // 2. Функция обновления интерфейса и сохранения
+    function updateUI() {
+        document.getElementById('coins').innerText = coins;
+        localStorage.setItem('coins', coins.toString());
+        localStorage.setItem('myItems', JSON.stringify(myItems));
+    }
+
+    function closeModal() { 
+        document.getElementById('update-modal').style.display = 'none'; 
+        updateUI(); 
+    }
+
+    function toggleInventory() { 
+        const m = document.getElementById('inventory-modal');
+        const isOpening = m.style.display !== 'flex';
+        m.style.display = isOpening ? 'flex' : 'none';
+        if(isOpening) renderInv();
+    }
+
+    function openCase() {
+        if (coins < 50) { 
+            tg.showPopup({message: "Недостаточно монет!"}); 
+            return; 
         }
+        
+        coins -= 50;
+        updateUI();
+        
+        const btn = document.getElementById('roll-btn');
+        const img = document.getElementById('main-img');
+        const status = document.getElementById('status');
 
-        function closeModal() { document.getElementById('update-modal').style.display = 'none'; updateUI(); }
-        function toggleInventory() { 
-            const m = document.getElementById('inventory-modal');
-            m.style.display = m.style.display === 'flex' ? 'none' : 'flex';
-            if(m.style.display === 'flex') renderInv();
-        }
+        btn.disabled = true;
+        img.classList.add('spinning');
+        status.innerText = "ОТКРЫВАЕМ...";
 
-        function openCase() {
-            if (coins < 50) { tg.showAlert("Нужно больше монет!"); return; }
-            coins -= 50;
-            updateUI();
+        // Имитация прокрутки
+        setTimeout(() => {
+            img.classList.remove('spinning');
+            const win = items[Math.floor(Math.random() * items.length)];
             
-            const btn = document.getElementById('roll-btn');
-            const img = document.getElementById('main-img');
-            const status = document.getElementById('status');
+            img.src = win.img;
+            status.innerText = win.name;
+            status.style.color = win.color;
 
-            btn.disabled = true;
-            img.classList.add('spinning');
-            status.innerText = "ОТКРЫВАЕМ...";
+            // СОХРАНЯЕМ В ИНВЕНТАРЬ (БЕЗ ЗАКРЫТИЯ ИГРЫ)
+            myItems.push(win); 
+            updateUI();
 
+            btn.disabled = false;
+            tg.HapticFeedback.notificationOccurred('success');
+
+            // Возвращаем коробку через 3 секунды
             setTimeout(() => {
-                img.classList.remove('spinning');
-                const win = items[Math.floor(Math.random() * items.length)];
-                
-                img.src = win.img;
-                status.innerText = win.name;
-                status.style.color = win.color;
-
-                myItems.push(win); // Сохраняем объект целиком
-                updateUI();
-
-                btn.disabled = false;
-                tg.HapticFeedback.notificationOccurred('success');
-
-                setTimeout(() => {
+                if (!btn.disabled) { // Если не начали новую прокрутку
                     img.src = "https://cdn-icons-png.flaticon.com/512/6161/6161301.png";
                     status.innerText = "КЕЙС ГОТОВ";
                     status.style.color = "white";
-                }, 2500);
-            }, 2000);
-        }
+                }
+            }, 3000);
+        }, 2000);
+    }
 
-        function renderInv() {
-            const grid = document.getElementById('inv-grid');
-            grid.innerHTML = myItems.length ? "" : "<p>Тут пока пусто</p>";
-            myItems.forEach(item => {
-                const card = document.createElement('div');
-                card.className = "inv-card";
-                card.innerHTML = `<img src="${item.img}"> <b>${item.name}</b>`;
-                card.style.borderColor = item.color;
-                grid.appendChild(card);
-            });
+    function renderInv() {
+        const grid = document.getElementById('inv-grid');
+        grid.innerHTML = "";
+        if (myItems.length === 0) {
+            grid.innerHTML = "<p style='grid-column: 1/3'>Инвентарь пуст</p>";
+            return;
         }
-    </script>
+        myItems.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = "inv-card";
+            card.style.border = `1px solid ${item.color}`;
+            card.innerHTML = `
+                <img src="${item.img}" style="width: 60px; height: 60px;">
+                <div style="margin-top: 5px; font-weight: bold;">${item.name}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // Инициализация при старте
+    updateUI();
+</script>
 </body>
 </html>
+
