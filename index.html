@@ -122,14 +122,14 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // !!! ВСТАВЬ СВОЮ ССЫЛКУ !!!
     const SERVER_URL = "https://df40ce8635b4c51b-92-63-106-58.serveousercontent.com"; 
     
-    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest';
-    const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Аноним';
+    // Получаем реальный ID игрока из Telegram
+    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest_test';
+    const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Игрок';
 
     let coins = 0;
-    let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
+    let myItems = [];
     let pendingItem = null;
     let isSpinning = false;
 
@@ -140,162 +140,98 @@
         "Gold Dragon": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712102.png", color: "#ffd700", price: 1500 }
     };
 
-    async function loadUser() {
+    // Загрузка данных именно этого игрока
+    async function loadData() {
         try {
-            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${MY_NAME}`);
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
             const d = await r.json();
             coins = d.balance;
+            myItems = d.inventory;
             document.getElementById('coins').innerText = coins;
-            document.getElementById('status').innerText = "КЕЙС ГОТОВ";
+            document.getElementById('status').innerText = "ГОТОВ";
             document.getElementById('roll-btn').disabled = false;
-        } catch(e) { document.getElementById('status').innerText = "ОШИБКА СВЯЗИ"; }
-    }
-
-    async function loadMarket() {
-        const list = document.getElementById('market-list');
-        list.innerHTML = "<p style='text-align:center;'>Загрузка...</p>";
-        try {
-            const r = await fetch(`${SERVER_URL}/market?action=get_market`);
-            const items = await r.json();
-            list.innerHTML = items.length ? "" : "<p style='text-align:center; opacity:0.3;'>МАРКЕТ ПУСТ</p>";
-            items.forEach(item => {
-                const conf = itemsConfig[item.item_name];
-                list.innerHTML += `
-                    <div class="list-item">
-                        <div class="item-info">
-                            <img src="${conf.img}" width="35">
-                            <div class="item-name">${item.item_name}<br><small style="opacity:0.5">${item.seller_name}</small></div>
-                        </div>
-                        <div style="text-align:right">
-                            <div class="item-price">${item.price} 💰</div>
-                            ${item.seller_id == MY_ID ? '<small style="color:red">Ваш лот</small>' : `<button onclick="buyMarket(${item.slot_id}, ${item.price}, '${item.item_name}')" style="background:#00ff88; border:none; border-radius:5px; padding:4px 10px; font-weight:bold;">КУПИТЬ</button>`}
-                        </div>
-                    </div>`;
-            });
-        } catch(e) { list.innerHTML = "Ошибка загрузки"; }
-    }
-
-    async function buyMarket(slotId, price, name) {
-        if(coins < price) return tg.showAlert("Недостаточно монет!");
-        const r = await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'buy_market', user_id: MY_ID, slot_id: slotId, item_name: name })
-        });
-        if(r.ok) {
-            coins -= price;
-            myItems.push({ id: Date.now(), name: name });
-            saveInv();
-            document.getElementById('coins').innerText = coins;
-            loadMarket();
-            tg.showAlert("Куплено!");
-        }
-    }
-
-    async function sellBot(idx) {
-        const item = myItems[idx];
-        const gain = Math.floor(itemsConfig[item.name].price * 0.75);
-        if(!confirm(`Продать боту за ${gain} 💰?`)) return;
-        await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'sell_bot', user_id: MY_ID, gain: gain })
-        });
-        coins += gain;
-        myItems.splice(idx, 1);
-        saveInv();
-        renderInv();
-        document.getElementById('coins').innerText = coins;
-    }
-
-    async function listMarket(idx) {
-        const item = myItems[idx];
-        const price = prompt(`Цена продажи ${item.name}:`, itemsConfig[item.name].price);
-        if(!price || isNaN(price) || price <= 0) return;
-        await fetch(`${SERVER_URL}/market`, {
-            method: 'POST',
-            body: JSON.stringify({ action: 'list_market', user_id: MY_ID, username: MY_NAME, item_name: item.name, price: parseInt(price) })
-        });
-        myItems.splice(idx, 1);
-        saveInv();
-        renderInv();
-        tg.showAlert("Выставлено на продажу!");
-    }
-
-    function startRoulette() {
-        if (isSpinning || coins < 50) return;
-        isSpinning = true;
-        coins -= 50;
-        document.getElementById('coins').innerText = coins;
-        document.getElementById('roll-btn').disabled = true;
-        document.getElementById('case-ui').style.display = 'none';
-        document.getElementById('roulette-box').style.display = 'block';
-
-        const line = document.getElementById('roulette-line');
-        line.innerHTML = '';
-        line.style.transition = 'none';
-        line.style.transform = 'translateX(0)';
-
-        const keys = Object.keys(itemsConfig);
-        const tape = [];
-        for(let i=0; i<60; i++) {
-            const k = keys[Math.floor(Math.random() * keys.length)];
-            tape.push(k);
-            line.innerHTML += `<div class="roulette-item" style="border-bottom:4px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
-        }
-
-        pendingItem = tape[45];
-        setTimeout(() => {
-            line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
-            line.style.transform = `translateX(-${45 * 130 - window.innerWidth / 2 + 65}px)`;
-        }, 50);
-
-        setTimeout(() => {
-            document.getElementById('win-img').src = itemsConfig[pendingItem].img;
-            document.getElementById('win-name').innerText = pendingItem;
-            document.getElementById('win-overlay').style.display = 'flex';
-        }, 5600);
+        } catch(e) { document.getElementById('status').innerText = "ОШИБКА"; }
     }
 
     async function collectItem() {
-        myItems.push({ id: Date.now(), name: pendingItem });
-        saveInv();
-        await fetch(`${SERVER_URL}/market`, { method: 'POST', body: JSON.stringify({ user_id: MY_ID, balance: coins }) });
+        await fetch(`${SERVER_URL}/market`, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'add_item', user_id: MY_ID, item_name: pendingItem })
+        });
+        await loadData();
         document.getElementById('win-overlay').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'none';
         document.getElementById('case-ui').style.display = 'block';
-        document.getElementById('roll-btn').disabled = false;
         isSpinning = false;
     }
 
     function renderInv() {
         const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.3;'>ПУСТО</p>";
+        grid.innerHTML = myItems.length ? "" : "<p style='opacity:0.3;'>ПУСТО</p>";
         myItems.forEach((item, idx) => {
             const conf = itemsConfig[item.name];
             grid.innerHTML += `
                 <div class="inv-card">
                     <img src="${conf.img}"><br><small>${item.name}</small>
                     <div class="inv-btns">
-                        <button class="btn-sm" onclick="sellBot(${idx})" style="color:#ffcc00; border-color:#ffcc00;">БОТУ</button>
-                        <button class="btn-sm" onclick="listMarket(${idx})" style="color:#00d2ff; border-color:#00d2ff;">РЫНОК</button>
+                        <button class="btn-sm" onclick="sellBot(${idx})" style="color:#ffcc00;">БОТУ</button>
+                        <button class="btn-sm" onclick="listMarket(${idx})" style="color:#00d2ff;">РЫНОК</button>
                     </div>
                 </div>`;
         });
     }
 
-    async function loadTop() {
-        const list = document.getElementById('top-list');
-        list.innerHTML = "Загрузка...";
-        const r = await fetch(`${SERVER_URL}/market?action=top`);
-        const data = await r.json();
-        list.innerHTML = data.map((p, i) => `
-            <div class="list-item" ${p.id == MY_ID ? 'style="border-color:var(--primary)"' : ''}>
-                <div class="item-info"><b>#${i+1}</b> <img src="${p.photo}" width="30" style="border-radius:50%"> ${p.username}</div>
-                <div class="item-price">${p.balance} 💰</div>
-            </div>`).join('');
+    async function sellBot(idx) {
+        const item = myItems[idx];
+        const gain = Math.floor(itemsConfig[item.name].price * 0.75);
+        await fetch(`${SERVER_URL}/market`, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'sell_bot', user_id: MY_ID, item_db_id: item.id, gain: gain })
+        });
+        await loadData();
+        renderInv();
     }
 
-    function saveInv() { localStorage.setItem('myItems', JSON.stringify(myItems)); }
-    
+    async function listMarket(idx) {
+        const item = myItems[idx];
+        const price = prompt(`Цена продажи ${item.name}:`, itemsConfig[item.name].price);
+        if(!price || isNaN(price)) return;
+        await fetch(`${SERVER_URL}/market`, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'list_market', user_id: MY_ID, username: MY_NAME, item_db_id: item.id, item_name: item.name, price: parseInt(price) })
+        });
+        await loadData();
+        renderInv();
+    }
+
+    async function loadMarket() {
+        const list = document.getElementById('market-list');
+        list.innerHTML = "Загрузка...";
+        const r = await fetch(`${SERVER_URL}/market?action=get_market`);
+        const items = await r.json();
+        list.innerHTML = items.length ? "" : "<p>МАРКЕТ ПУСТ</p>";
+        items.forEach(item => {
+            const conf = itemsConfig[item.item_name];
+            list.innerHTML += `
+                <div class="list-item">
+                    <div class="item-info"><img src="${conf.img}" width="30"> ${item.item_name}</div>
+                    <div>
+                        <span class="item-price">${item.price} 💰</span>
+                        ${item.seller_id !== MY_ID ? `<button onclick="buyMarket(${item.slot_id})">КУПИТЬ</button>` : ''}
+                    </div>
+                </div>`;
+        });
+    }
+
+    async function buyMarket(slotId) {
+        await fetch(`${SERVER_URL}/market`, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'buy_market', user_id: MY_ID, slot_id: slotId })
+        });
+        await loadData();
+        loadMarket();
+    }
+
     function showScreen(id, el) {
         if(isSpinning) return;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -304,10 +240,10 @@
         el.classList.add('active');
         if(id === 'inv') renderInv();
         if(id === 'market') loadMarket();
-        if(id === 'top') loadTop();
     }
 
-    loadUser();
+    loadData();
 </script>
 </body>
 </html>
+
