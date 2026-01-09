@@ -5,83 +5,80 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NFT Tycoon</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
 <style>
 :root{
- --bg:#050505;--glass:rgba(255,255,255,.06);
- --primary:#00d2ff;--accent:#9d50bb;--green:#00ff88;
+ --bg:#050505;
+ --glass:rgba(255,255,255,.06);
+ --primary:#00d2ff;
+ --accent:#9d50bb;
+ --green:#00ff88;
 }
 body{
- margin:0;background:radial-gradient(circle,#1a1a2e,#050505);
- color:#fff;font-family:Segoe UI,sans-serif;
- display:flex;flex-direction:column;align-items:center;height:100vh;overflow:hidden;
+ margin:0;
+ background:radial-gradient(circle,#1a1a2e,#050505);
+ color:#fff;
+ font-family:Segoe UI,sans-serif;
+ display:flex;
+ flex-direction:column;
+ align-items:center;
+ height:100vh;
+ overflow:hidden;
 }
 .top{margin-top:20px;display:flex;justify-content:space-between;width:90%}
 .balance{background:var(--glass);padding:8px 16px;border-radius:20px;color:var(--green);font-weight:800}
 .screen{display:none;flex-direction:column;align-items:center;width:100%;height:100%;padding-bottom:90px;position:absolute;top:0}
 .screen.active{display:flex}
-.btn{padding:14px 30px;border:none;border-radius:18px;
- background:linear-gradient(135deg,var(--primary),var(--accent));
- color:#fff;font-weight:800;cursor:pointer}
-.nav{position:fixed;bottom:20px;background:rgba(0,0,0,.8);
- padding:12px 30px;border-radius:30px;display:flex;gap:30px}
+.btn{padding:14px 30px;border:none;border-radius:18px; background:linear-gradient(135deg,var(--primary),var(--accent)); color:#fff;font-weight:800;cursor:pointer}
+.nav{position:fixed;bottom:20px;background:rgba(0,0,0,.8); padding:12px 30px;border-radius:30px;display:flex;gap:30px}
 .nav div{font-size:1.5rem;opacity:.3;cursor:pointer}
 .nav .active{opacity:1;color:var(--primary);transform:scale(1.2)}
-
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:90%}
 .card{background:var(--glass);padding:15px;border-radius:20px;text-align:center}
 .card img{width:50px}
 .small{font-size:.65rem}
-
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);
- display:none;align-items:center;justify-content:center;z-index:5000}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.95); display:none;align-items:center;justify-content:center;z-index:5000}
 .popup{background:#111;padding:25px;border-radius:30px;animation:pop .4s}
 @keyframes pop{from{transform:scale(.7)}to{transform:scale(1)}}
-
 .list{width:90%;max-height:60vh;overflow-y:auto}
-.item{display:flex;justify-content:space-between;
- background:var(--glass);padding:12px;border-radius:15px;margin-bottom:8px}
+.item{display:flex;justify-content:space-between; background:var(--glass);padding:12px;border-radius:15px;margin-bottom:8px}
 </style>
 </head>
-
 <body>
-
 <div class="top">
-  <div class="balance">💰 <span id="coins">0</span></div>
-  <div style="font-weight:900;font-size:.7rem">NFT TYCOON</div>
+ <div class="balance">💰 <span id="coins">0</span></div>
+ <div style="font-weight:900;font-size:.7rem">NFT TYCOON</div>
 </div>
 
 <!-- CASE -->
 <div id="case" class="screen active">
-  <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png"
-       width="180" style="margin-top:100px;cursor:pointer" onclick="openCasePreview()">
-  <button class="btn" style="margin-top:20px" onclick="openCase()">ОТКРЫТЬ КЕЙС (50)</button>
+ <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="180" style="margin-top:100px;cursor:pointer" onclick="openCasePreview()">
+ <button class="btn" style="margin-top:20px" onclick="openCase()">ОТКРЫТЬ КЕЙС (50)</button>
 </div>
 
 <!-- INVENTORY -->
 <div id="inv" class="screen">
-  <h2 style="margin-top:60px">🎒 ИНВЕНТАРЬ</h2>
-  <div class="grid" id="invGrid"></div>
+ <h2 style="margin-top:60px">🎒 ИНВЕНТАРЬ</h2>
+ <div class="grid" id="invGrid"></div>
 </div>
 
 <!-- MARKET -->
 <div id="market" class="screen">
-  <h2 style="margin-top:60px">⚖️ МАРКЕТ</h2>
-  <div class="list" id="marketList"></div>
+ <h2 style="margin-top:60px">⚖️ МАРКЕТ</h2>
+ <div class="list" id="marketList"></div>
 </div>
 
 <!-- TOP -->
 <div id="top" class="screen">
-  <h2 style="margin-top:60px">🏆 ТОП</h2>
-  <div class="list" id="topList"></div>
+ <h2 style="margin-top:60px">🏆 ТОП</h2>
+ <div class="list" id="topList"></div>
 </div>
 
 <!-- CASE CONTENT -->
 <div id="casePreview" class="overlay">
  <div class="popup">
-  <h3>СОДЕРЖИМОЕ КЕЙСА</h3>
-  <div id="caseItems"></div>
-  <button class="btn" onclick="closePreview()">ЗАКРЫТЬ</button>
+   <h3>СОДЕРЖИМОЕ КЕЙСА</h3>
+   <div id="caseItems"></div>
+   <button class="btn" onclick="closePreview()">ЗАКРЫТЬ</button>
  </div>
 </div>
 
@@ -93,47 +90,47 @@ body{
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+const tg = window.Telegram.WebApp;
+tg.expand();
 
-  if (!window.Telegram || !window.Telegram.WebApp) {
-    document.body.innerHTML = "<h2>Откройте через Telegram</h2>";
-    return;
-  }
+const SERVER="https://24ddd5548d384c5e-92-63-106-58.serveousercontent.com";
+let MY_ID=null;
+let MY_NAME="";
 
-  const tg = window.Telegram.WebApp;
-  tg.ready();      // 🔥 ОБЯЗАТЕЛЬНО
-  tg.expand();
-
-  // ждём initData
-  let tries = 0;
-  const waitUser = setInterval(() => {
-    tries++;
-    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-      clearInterval(waitUser);
-      initGame(tg);
-    }
-    if (tries > 20) {
-      clearInterval(waitUser);
-      document.body.innerHTML = "<h2>Ошибка Telegram WebApp</h2>";
-    }
-  }, 100);
-});
-
-function initGame(tg) {
-  // ⬇⬇⬇ ВЕСЬ ТВОЙ КОД ПЕРЕНОСИМ СЮДА ⬇⬇⬇
-
-  const SERVER="https://24ddd5548d384c5e-92-63-106-58.serveousercontent.com";
-  const MY_ID = String(tg.initDataUnsafe.user.id);
-  const MY_NAME = tg.initDataUnsafe.user.first_name;
-
-  window.MY_ID = MY_ID;
-  window.MY_NAME = MY_NAME;
-
-  load();
+if(tg.initDataUnsafe && tg.initDataUnsafe.user){
+    MY_ID=String(tg.initDataUnsafe.user.id);
+    MY_NAME=tg.initDataUnsafe.user.first_name;
+} else {
+    document.body.innerHTML="<h2>Откройте через Telegram Web App</h2>";
+    throw "NOT TG";
 }
-</script>
 
-</body>
-</html>
+const items={
+ "Common Bot":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712139.png",price:20},
+ "Rare Cyber":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712109.png",price:100},
+ "Ultra Legend":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712095.png",price:500},
+ "Gold Dragon":{img:"https://cdn-icons-png.flaticon.com/512/4712/4712102.png",price:1500}
+};
 
+let coins=0,myInv=[];
 
+async function api(data){
+    return fetch(SERVER,{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(data)
+    }).then(r=>r.json());
+}
+
+async function load(){
+    try{
+        const r=await fetch(`${SERVER}?user_id=${MY_ID}`);
+        const d=await r.json();
+        coins=d.balance||0;
+        myInv=d.inventory||[];
+        document.getElementById("coins").innerText=coins;
+    }catch(e){console.log(e);}
+}
+
+function openCasePreview(){
+    const caseItems=document.getElementById("caseItems"
