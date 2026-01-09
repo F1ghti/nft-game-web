@@ -26,55 +26,43 @@
         .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; }
         .nav-item.active { opacity: 1; color: var(--primary); }
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
-        
-        /* Состояние загрузки */
-        #loading-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">Загрузка данных Telegram...</div>
-
-    <div id="error-screen" style="display:none; text-align:center; padding:50px;">
-        <h2>❌ Ошибка авторизации</h2>
-        <p>Пожалуйста, запустите игру через бота.</p>
+    <div class="top-bar">
+        <div class="balance-box">💰 <span id="coins">0</span></div>
+        <div id="u-name" style="font-weight: bold; color: var(--primary);">Загрузка...</div>
     </div>
 
-    <div id="game-content" style="display:none; width:100%; flex-direction: column; align-items: center;">
-        <div class="top-bar">
-            <div class="balance-box">💰 <span id="coins">...</span></div>
-            <div id="u-name" style="font-weight: bold; color: var(--primary);">...</div>
+    <div id="screen-case" class="screen active">
+        <div id="case-ui" style="text-align: center;">
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="130">
+            <div id="case-preview"></div>
         </div>
-
-        <div id="screen-case" class="screen active">
-            <div id="case-ui" style="text-align: center;">
-                <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="130">
-                <div id="case-preview"></div>
-            </div>
-            <div class="roulette-wrapper" id="roulette-box">
-                <div style="position:absolute; left:50%; width:2px; height:100%; background:red; z-index:50; transform:translateX(-50%);"></div>
-                <div class="roulette-line" id="roulette-line"></div>
-            </div>
-            <button class="btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
+        <div class="roulette-wrapper" id="roulette-box">
+            <div style="position:absolute; left:50%; width:2px; height:100%; background:red; z-index:50; transform:translateX(-50%);"></div>
+            <div class="roulette-line" id="roulette-line"></div>
         </div>
+        <button class="btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
+    </div>
 
-        <div id="screen-inv" class="screen"><h2>🎒 РЮКЗАК</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
-        <div id="screen-market" class="screen"><h2>⚖️ МАРКЕТ</h2><div class="scroll-area" id="market-list"></div></div>
-        <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
+    <div id="screen-inv" class="screen"><h2>🎒 РЮКЗАК</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
+    <div id="screen-market" class="screen"><h2>⚖️ МАРКЕТ</h2><div class="scroll-area" id="market-list"></div></div>
+    <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
 
-        <div id="win-overlay" class="win-overlay">
-            <h2 style="color: gold;">ВЫПАЛО!</h2>
-            <img id="win-img" src="" width="160">
-            <h3 id="win-name"></h3>
-            <button class="btn" onclick="collectItem()" style="background:#00ff88; color:black;">ЗАБРАТЬ</button>
-        </div>
+    <div id="win-overlay" class="win-overlay">
+        <h2 style="color: gold;">ВЫПАЛО!</h2>
+        <img id="win-img" src="" width="160">
+        <h3 id="win-name"></h3>
+        <button class="btn" onclick="collectItem()" style="background:#00ff88; color:black;">ЗАБРАТЬ</button>
+    </div>
 
-        <div class="nav-menu">
-            <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
-            <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
-            <div class="nav-item" onclick="showScreen('market', this)">⚖️</div>
-            <div class="nav-item" onclick="showScreen('top', this)">🏆</div>
-        </div>
+    <div class="nav-menu">
+        <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
+        <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
+        <div class="nav-item" onclick="showScreen('market', this)">⚖️</div>
+        <div class="nav-item" onclick="showScreen('top', this)">🏆</div>
     </div>
 
 <script>
@@ -84,8 +72,11 @@
 
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
     
-    let MY_ID = null;
-    let MY_NAME = "Игрок";
+    let MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : "test_user";
+    let MY_NAME = tg.initDataUnsafe.user?.username || tg.initDataUnsafe.user?.first_name || "Игрок";
+    
+    document.getElementById('u-name').innerText = MY_NAME;
+
     let coins = 0, myItems = [], pendingItem = null;
 
     const itemsConfig = {
@@ -94,49 +85,16 @@
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    // --- ЛОГИКА ВХОДА (ИСПРАВЛЕННАЯ) ---
-    async function initApp() {
-        console.log("Инициализация...");
-        for (let i = 0; i < 10; i++) { // Увеличил до 10 попыток для надежности
-            const user = tg.initDataUnsafe?.user;
-            if (user && user.id) {
-                MY_ID = String(user.id);
-                MY_NAME = user.username || user.first_name || "Игрок";
-                break;
-            }
-            await new Promise(r => setTimeout(r, 300));
-        }
+    const preview = document.getElementById('case-preview');
+    Object.values(itemsConfig).forEach(i => { preview.innerHTML += `<img src="${i.img}">`; });
 
-        if (!MY_ID) {
-            document.getElementById('loading-screen').innerHTML = `
-                <div style="color: red; text-align:center; padding: 20px;">
-                    <h3>❌ Данные не получены</h3>
-                    <p>Попробуйте перезапустить бота или обновить страницу.</p>
-                </div>`;
-            return;
-        }
-
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('game-content').style.display = 'flex';
-        document.getElementById('u-name').innerText = MY_NAME;
-        
-        // Рисуем кейсы сразу после входа
-        const preview = document.getElementById('case-preview');
-        preview.innerHTML = Object.values(itemsConfig).map(i => `<img src="${i.img}">`).join('');
-
-        await loadData();
-    }
-
-    // --- ЛОГИКА ИГРЫ (СОХРАНЕННАЯ) ---
     async function loadData() {
-        if (!MY_ID) return;
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
             const d = await r.json();
-            coins = d.balance !== undefined ? d.balance : 0;
-            myItems = d.inventory || [];
+            coins = d.balance; myItems = d.inventory;
             document.getElementById('coins').innerText = coins;
-        } catch (e) { console.error("Ошибка загрузки:", e); }
+        } catch (e) {}
     }
 
     function startRoulette() {
@@ -233,10 +191,7 @@
         if(id==='inv') renderInv(); else if(id==='market') loadMarket(); else if(id==='top') loadTop();
     }
 
-    // Запуск всего процесса
-    window.onload = initApp;
+    loadData();
 </script>
 </body>
 </html>
-
-
