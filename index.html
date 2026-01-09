@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Case Simulator & Top</title>
+    <title>NFT Tycoon P2P</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { 
@@ -15,306 +15,236 @@
             color: white; font-family: 'Segoe UI', sans-serif; margin: 0; 
             display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; 
         }
-
-        /* ВЕРХНЯЯ ПАНЕЛЬ */
         .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; z-index: 10; }
-        .balance-box { 
-            background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; 
-            border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88; min-width: 60px; text-align: center;
-        }
-
-        /* ЭКРАНЫ */
+        .balance-box { background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88; }
+        
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
 
-        /* МОДАЛКА СОДЕРЖИМОГО */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000; flex-direction: column; align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background: #1a1a2e; border-radius: 25px; padding: 25px;
-            width: 85%; max-width: 350px; text-align: center; border: 2px solid var(--primary);
-        }
-        .modal-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px; }
-        .modal-item-card { background: var(--glass); border-radius: 12px; padding: 10px; border-bottom: 3px solid; font-size: 0.7rem; }
-        .modal-item-card img { width: 40px; }
-
         /* РУЛЕТКА */
-        .roulette-wrapper {
-            position: relative; width: 100%; height: 140px;
-            display: none; margin: 20px 0; overflow: hidden;
-            background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary);
-        }
+        .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
         .roulette-line { display: flex; position: absolute; left: 0; top: 10px; will-change: transform; }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
         .roulette-item img { width: 70px; }
         .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; box-shadow: 0 0 10px #ff4444; }
 
-        /* ТОП ИГРОКОВ */
-        .top-list { width: 90%; margin-top: 20px; max-height: 60vh; overflow-y: auto; }
-        .top-item {
-            display: flex; align-items: center; background: var(--glass);
-            padding: 10px; border-radius: 15px; margin-bottom: 8px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .top-rank { width: 25px; font-weight: 900; color: var(--primary); font-size: 0.9rem; }
-        .top-avatar { width: 40px; height: 40px; border-radius: 50%; margin: 0 12px; border: 2px solid var(--primary); object-fit: cover; }
-        .top-name { flex-grow: 1; font-weight: bold; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .top-balance { color: #00ff88; font-weight: 800; font-size: 0.9rem; }
-
-        /* ВИНЛОГ / ИНВЕНТАРЬ */
-        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
-        .win-card { text-align: center; background: #1a1a2e; padding: 30px; border-radius: 30px; border: 2px solid var(--primary); width: 80%; }
+        /* СПИСКИ */
+        .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .inv-card img { width: 50px; }
         
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 15px 35px; border-radius: 18px; color: white; font-weight: bold; cursor: pointer; }
+        .market-lot { background: var(--glass); padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--primary); }
+        .price-tag { color: #00ff88; font-weight: bold; }
+
+        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
         .btn:disabled { opacity: 0.3; }
 
-        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 40px; background: rgba(0,0,0,0.8); padding: 12px 35px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid var(--glass); z-index: 100; }
-        .nav-item { font-size: 1.6rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
-        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.2); }
+        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid var(--glass); z-index: 100; }
+        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
+        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.1); }
 
-        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
-        .inv-card { background: var(--glass); padding: 15px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-        .inv-card img { width: 50px; }
+        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div style="font-weight: 900; letter-spacing: 1px; font-size: 0.7rem;">NFT TYCOON</div>
+        <div style="font-weight: 900; font-size: 0.7rem;">NFT TYCOON</div>
     </div>
 
     <div id="screen-case" class="screen active">
         <div id="case-ui" style="text-align: center;">
-            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="170" style="cursor: pointer;" onclick="showCaseContent()">
-            <p style="font-size: 0.7rem; opacity: 0.5; margin-top: 5px;">Нажми на кейс, чтобы глянуть дроп</p>
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="150" onclick="tg.HapticFeedback.impactOccurred('medium')">
+            <p style="opacity: 0.5; font-size: 0.8rem;">КЕЙС С NFT РОБОТАМИ</p>
         </div>
         <div class="roulette-wrapper" id="roulette-box">
             <div class="roulette-marker"></div>
             <div class="roulette-line" id="roulette-line"></div>
         </div>
-        <h2 id="status" style="margin: 20px 0; font-size: 1.1rem;">ЗАГРУЗКА...</h2>
+        <h2 id="status" style="margin: 20px 0;">ГОТОВ</h2>
         <button class="btn" id="roll-btn" onclick="startRoulette()" disabled>ОТКРЫТЬ (50)</button>
     </div>
 
     <div id="screen-inv" class="screen">
-        <h2 style="margin-top: 60px;">🎒 ИНВЕНТАРЬ</h2>
-        <div class="inv-grid" id="inv-grid"></div>
+        <h2>🎒 ИНВЕНТАРЬ</h2>
+        <div class="scroll-area inv-grid" id="inv-grid"></div>
+    </div>
+
+    <div id="screen-market" class="screen">
+        <h2>⚖️ РЫНОК</h2>
+        <div class="scroll-area" id="market-list"></div>
     </div>
 
     <div id="screen-top" class="screen">
-        <h2 style="margin-top: 60px; color: gold;">🏆 ТОП МАГНАТОВ</h2>
-        <div class="top-list" id="top-list-container"></div>
-    </div>
-
-    <div id="case-content-modal" class="modal-overlay">
-        <div class="modal-content">
-            <h3 style="margin-top: 0;">Шансы выпадения</h3>
-            <div class="modal-grid" id="modal-items-grid"></div>
-            <button class="btn" onclick="hideCaseContent()" style="margin-top: 20px; padding: 10px 20px; background: #333;">Закрыть</button>
-        </div>
+        <h2>🏆 ТОП</h2>
+        <div class="scroll-area" id="top-list"></div>
     </div>
 
     <div id="win-overlay" class="win-overlay">
-        <div class="win-card">
-            <h2 style="margin: 0; color: gold;">JACKPOT!</h2>
-            <p id="win-type" style="opacity: 0.6; margin: 5px 0; font-size: 0.8rem;"></p>
-            <img id="win-img" src="" width="130" style="margin: 15px 0;">
-            <h3 id="win-name" style="margin-bottom: 20px;"></h3>
-            <button class="btn" onclick="collectItem()" style="width: 100%; background: #00ff88; color: black;">ЗАБРАТЬ</button>
-        </div>
+        <h2 style="color: gold;">ВЫПАЛО!</h2>
+        <img id="win-img" src="" width="150">
+        <h3 id="win-name"></h3>
+        <button class="btn" onclick="collectItem()" style="background: #00ff88; color: black;">ЗАБРАТЬ</button>
     </div>
 
     <div class="nav-menu">
         <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
         <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
+        <div class="nav-item" onclick="showScreen('market', this)">⚖️</div>
         <div class="nav-item" onclick="showScreen('top', this)">🏆</div>
     </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-
-    // !!! ОБЯЗАТЕЛЬНО ПРОВЕРЬ ЭТУ ССЫЛКУ !!!
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
-    
-    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest';
+    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : '12345';
     const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Аноним';
 
-    let coins = 0;
-    let isLoaded = false;
-    let myItems = [];
-    let pendingItem = null;
-
+    let coins = 0, myItems = [], pendingItem = null, isLoaded = false;
     const itemsConfig = {
-        "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20, rarity: "ОБЫЧНЫЙ" },
-        "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100, rarity: "РЕДКИЙ" },
-        "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500, rarity: "ЛЕГЕНДАРНЫЙ" },
-        "Gold Dragon": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712102.png", color: "#ffd700", price: 1500, rarity: "МИФИК" }
+        "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
+        "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100 },
+        "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 },
+        "Gold Dragon": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712102.png", color: "#ffd700", price: 1500 }
     };
 
-    async function initialLoad() {
+    async function loadData() {
         try {
-            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${MY_NAME}`);
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
             const d = await r.json();
-            coins = d.balance;
-            myItems = d.inventory || [];
-            isLoaded = true;
+            coins = d.balance; myItems = d.inventory || [];
             document.getElementById('coins').innerText = coins;
-            document.getElementById('status').innerText = "КЕЙС ГОТОВ";
             document.getElementById('roll-btn').disabled = false;
-            renderModalPreview();
-        } catch(e) {
-            document.getElementById('status').innerText = "ОШИБКА СЕРВЕРА";
-        }
+            isLoaded = true;
+        } catch(e) { document.getElementById('status').innerText = "ОШИБКА СВЯЗИ"; }
     }
-
-    async function loadTop() {
-        const container = document.getElementById('top-list-container');
-        container.innerHTML = "<p style='text-align:center;'>Загрузка лидеров...</p>";
-        try {
-            const r = await fetch(`${SERVER_URL}/market?action=top`);
-            const data = await r.json();
-            container.innerHTML = "";
-            data.forEach((p, i) => {
-                const div = document.createElement('div');
-                div.className = 'top-item';
-                if(p.id == MY_ID) div.style.background = "rgba(0, 255, 136, 0.1)";
-                div.innerHTML = `
-                    <div class="top-rank">#${i+1}</div>
-                    <img class="top-avatar" src="${p.photo}">
-                    <div class="top-name">${p.username}</div>
-                    <div class="top-balance">💰 ${p.balance}</div>
-                `;
-                container.appendChild(div);
-            });
-        } catch(e) { container.innerHTML = "Не удалось загрузить ТОП"; }
-    }
-
-    function renderModalPreview() {
-        const grid = document.getElementById('modal-items-grid');
-        grid.innerHTML = '';
-        Object.keys(itemsConfig).forEach(k => {
-            const conf = itemsConfig[k];
-            grid.innerHTML += `
-                <div class="modal-item-card" style="border-bottom-color: ${conf.color}">
-                    <img src="${conf.img}"><br><b>${k}</b><br><span style="opacity:0.6">${conf.price}💰</span>
-                </div>`;
-        });
-    }
-
-    function showCaseContent() { document.getElementById('case-content-modal').style.display = 'flex'; tg.HapticFeedback.impactOccurred('light'); }
-    function hideCaseContent() { document.getElementById('case-content-modal').style.display = 'none'; }
 
     function startRoulette() {
-        if (!isLoaded || coins < 50) { tg.showAlert("Недостаточно монет!"); return; }
-        coins -= 50; 
-        document.getElementById('coins').innerText = coins;
-        
-        const btn = document.getElementById('roll-btn');
-        const box = document.getElementById('roulette-box');
+        if (coins < 50) return alert("Мало монет!");
+        coins -= 50; document.getElementById('coins').innerText = coins;
         const line = document.getElementById('roulette-line');
-        const caseUI = document.getElementById('case-ui');
-        
-        btn.disabled = true;
-        caseUI.style.display = 'none';
-        box.style.display = 'block';
-        document.getElementById('status').innerText = "УДАЧИ!";
+        document.getElementById('case-ui').style.display = 'none';
+        document.getElementById('roulette-box').style.display = 'block';
+        document.getElementById('roll-btn').disabled = true;
 
         line.innerHTML = '';
-        line.style.transition = 'none';
-        line.style.transform = 'translateX(0)';
-
         const keys = Object.keys(itemsConfig);
         const tape = [];
-        for(let i=0; i<60; i++) {
-            const k = keys[Math.floor(Math.random() * keys.length)];
+        for(let i=0; i<60; i++){
+            let k = keys[Math.floor(Math.random()*keys.length)];
             tape.push(k);
-            const el = document.createElement('div');
-            el.className = 'roulette-item';
-            el.style.borderBottom = `4px solid ${itemsConfig[k].color}`;
-            el.innerHTML = `<img src="${itemsConfig[k].img}">`;
-            line.appendChild(el);
+            line.innerHTML += `<div class="roulette-item" style="border-bottom:4px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
         }
-
-        const winIdx = 45;
-        pendingItem = tape[winIdx];
-
+        pendingItem = tape[45];
         setTimeout(() => {
             line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
-            const offset = (winIdx * 130) - (window.innerWidth / 2) + 65;
-            line.style.transform = `translateX(-${offset}px)`;
+            line.style.transform = `translateX(-${45*130 - window.innerWidth/2 + 65}px)`;
         }, 50);
-
         setTimeout(() => {
-            const item = itemsConfig[pendingItem];
-            document.getElementById('win-img').src = item.img;
+            document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
-            document.getElementById('win-name').style.color = item.color;
-            document.getElementById('win-type').innerText = item.rarity;
             document.getElementById('win-overlay').style.display = 'flex';
             tg.HapticFeedback.notificationOccurred('success');
         }, 5600);
     }
 
     async function collectItem() {
-        try {
-            await fetch(`${SERVER_URL}/market?action=add_item`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: MY_ID, item_name: pendingItem, balance: coins })
-            });
-            await initialLoad(); 
-        } catch(e) { console.error("Ошибка сохранения"); }
-
+        await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
+            method: 'POST', body: JSON.stringify({ item_name: pendingItem, balance: coins })
+        });
         document.getElementById('win-overlay').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'none';
         document.getElementById('case-ui').style.display = 'block';
-        document.getElementById('roll-btn').disabled = false;
-        document.getElementById('status').innerText = "КЕЙС ГОТОВ";
+        loadData();
     }
 
-    async function sellItem(db_id, itemName) {
-        const price = itemsConfig[itemName].price;
-        coins += price;
-        try {
-            await fetch(`${SERVER_URL}/market?action=sell_item`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: MY_ID, item_db_id: db_id, balance: coins })
-            });
-            document.getElementById('coins').innerText = coins;
-            await initialLoad();
-            renderInv();
-        } catch(e) { alert("Ошибка при продаже"); }
+    async function sellToBot(id, name) {
+        let p = Math.floor(itemsConfig[name].price * 0.75);
+        if(!confirm(`Продать боту за ${p}?`)) return;
+        coins += p;
+        await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
+            method: 'POST', body: JSON.stringify({ item_db_id: id, balance: coins })
+        });
+        loadData(); showScreen('inv', document.querySelector('.nav-item:nth-child(2)'));
+    }
+
+    async function listOnMarket(id, name) {
+        let p = prompt("Ваша цена:", itemsConfig[name].price);
+        if(!p || isNaN(p)) return;
+        await fetch(`${SERVER_URL}/market?action=list_lot&user_id=${MY_ID}`, {
+            method: 'POST', body: JSON.stringify({ item_db_id: id, item_name: name, price: parseInt(p), username: MY_NAME })
+        });
+        loadData(); showScreen('inv', document.querySelector('.nav-item:nth-child(2)'));
+    }
+
+    async function loadMarket() {
+        const r = await fetch(`${SERVER_URL}/market?action=market_lots`);
+        const lots = await r.json();
+        const cont = document.getElementById('market-list');
+        cont.innerHTML = lots.length ? "" : "<p style='text-align:center; opacity:0.3;'>Рынок пуст</p>";
+        lots.forEach(l => {
+            let isMy = l.seller_id == MY_ID;
+            cont.innerHTML += `<div class="market-lot">
+                <div><b>${l.item_name}</b><br><small>От: ${l.seller_name}</small></div>
+                <div class="price-tag">${l.price} 💰</div>
+                <button onclick="${isMy?'cancelLot':'buyLot'}(${l.lot_id})" class="btn" style="padding:5px 10px; background:${isMy?'#444':'#00ff88'}; color:${isMy?'white':'black'}">
+                    ${isMy?'СНЯТЬ':'КУПИТЬ'}
+                </button>
+            </div>`;
+        });
+    }
+
+    async function buyLot(id) {
+        await fetch(`${SERVER_URL}/market?action=buy_lot&user_id=${MY_ID}`, { method: 'POST', body: JSON.stringify({ lot_id: id }) });
+        loadData(); loadMarket();
+    }
+    async function cancelLot(id) {
+        await fetch(`${SERVER_URL}/market?action=cancel_lot&user_id=${MY_ID}`, { method: 'POST', body: JSON.stringify({ lot_id: id }) });
+        loadData(); loadMarket();
     }
 
     function renderInv() {
-        const grid = document.getElementById('inv-grid');
-        grid.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.3; text-align:center; width:100%;'>ПУСТО</p>";
-        myItems.forEach((item) => {
-            const conf = itemsConfig[item.name];
-            if(!conf) return;
-            grid.innerHTML += `
-                <div class="inv-card">
-                    <img src="${conf.img}"><br><small>${item.name}</small><br>
-                    <button onclick="sellItem(${item.id}, '${item.name}')" style="margin-top:8px; color:#ff4444; background:none; border:1px solid #ff4444; border-radius:8px; font-size:0.7rem; padding:4px; cursor:pointer;">ПРОДАТЬ ${conf.price}</button>
-                </div>`;
+        const g = document.getElementById('inv-grid');
+        g.innerHTML = myItems.length ? "" : "<p style='grid-column:1/3; opacity:0.3;'>ПУСТО</p>";
+        myItems.forEach(i => {
+            g.innerHTML += `<div class="inv-card">
+                <img src="${itemsConfig[i.name].img}"><br><small>${i.name}</small><br>
+                <button onclick="sellToBot(${i.id}, '${i.name}')" style="font-size:0.6rem; color:orange; background:none; border:1px solid orange; margin-top:5px;">БОТУ</button>
+                <button onclick="listOnMarket(${i.id}, '${i.name}')" style="font-size:0.6rem; color:cyan; background:none; border:1px solid cyan; margin-top:5px;">РЫНОК</button>
+            </div>`;
         });
+    }
+
+    async function loadTop() {
+        const r = await fetch(`${SERVER_URL}/market?action=top`);
+        const d = await r.json();
+        const c = document.getElementById('top-list');
+        c.innerHTML = d.map((p, i) => `
+            <div class="market-lot" style="border-left-color: gold">
+                <div style="display:flex; align-items:center;">
+                    <span style="margin-right:10px;">#${i+1}</span>
+                    <img src="${p.photo}" style="width:30px; height:30px; border-radius:50%; margin-right:10px;">
+                    <b>${p.username}</b>
+                </div>
+                <div class="price-tag">${p.balance}</div>
+            </div>
+        `).join('');
     }
 
     function showScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.getElementById('screen-' + id).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('screen-'+id).classList.add('active');
         el.classList.add('active');
         if(id === 'inv') renderInv();
+        if(id === 'market') loadMarket();
         if(id === 'top') loadTop();
     }
 
-    initialLoad();
+    loadData();
 </script>
 </body>
 </html>
