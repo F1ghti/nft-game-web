@@ -9,7 +9,6 @@
         :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.08); }
         body { background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: sans-serif; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
         
-        /* Верхняя панель: только баланс слева */
         .top-bar { width: 90%; display: flex; justify-content: flex-start; align-items: center; margin-top: 25px; z-index: 10; }
         .balance-box { background: var(--glass); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); color: #00ff88; font-weight: bold; }
         
@@ -25,7 +24,8 @@
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
+        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; border: 1px solid var(--glass); z-index: 100; }
         .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; }
@@ -42,7 +42,7 @@
 
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">0</span></div>
-        </div>
+    </div>
 
     <div id="screen-case" class="screen active">
         <div id="case-ui" style="text-align: center;">
@@ -56,7 +56,7 @@
             <div style="position:absolute; left:50%; width:2px; height:100%; background:red; z-index:50; transform:translateX(-50%);"></div>
             <div class="roulette-line" id="roulette-line"></div>
         </div>
-        <button class="btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
+        <button id="open-btn" class="btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
     </div>
 
     <div id="screen-inv" class="screen"><h2>🎒 РЮКЗАК</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
@@ -90,12 +90,12 @@
     tg.ready();
     tg.expand();
 
-    // !!! СЮДА ВСТАВЬ СВОЮ ССЫЛКУ ИЗ SERVEO !!!
     const SERVER_URL = "https://7ed2d1db5acd5a60-92-63-106-58.serveousercontent.com"; 
     
     let MY_ID = "test_user";
     let MY_NAME = "User";
     let coins = 0, myItems = [], pendingItem = null;
+    let isSpinning = false; // Флаг блокировки повторного открытия
 
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
@@ -104,7 +104,6 @@
     };
 
     async function loadData() {
-        // Получаем ID пользователя Telegram
         if (tg.initDataUnsafe?.user?.id) {
             MY_ID = String(tg.initDataUnsafe.user.id);
             MY_NAME = tg.initDataUnsafe.user.first_name || "User";
@@ -122,12 +121,12 @@
             }
         } catch (e) {
             console.error("Ошибка при загрузке данных:", e);
-            // Если сервер не отвечает, пробуем еще раз через 3 секунды
             setTimeout(loadData, 3000);
         }
     }
 
     function showCaseContents() {
+        if (isSpinning) return; // Не показывать содержимое во время крутки
         const list = document.getElementById('drop-list');
         list.innerHTML = '';
         Object.entries(itemsConfig).forEach(([name, data]) => {
@@ -140,8 +139,14 @@
     }
 
     function startRoulette() {
+        if (isSpinning) return; // Если уже крутим — игнорируем нажатие
         if (coins < 50) return alert("Недостаточно монет!");
         
+        isSpinning = true; // Блокируем кнопку
+        const btn = document.getElementById('open-btn');
+        btn.disabled = true;
+        btn.innerText = "ОТКРЫВАЕМ...";
+
         const line = document.getElementById('roulette-line');
         document.getElementById('case-ui').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'block';
@@ -168,11 +173,13 @@
             document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
             document.getElementById('win-overlay').style.display = 'flex';
+            
+            // Сбрасываем текст кнопки, но она остается неактивной до нажатия "ЗАБРАТЬ"
+            btn.innerText = "ОТКРЫТЬ (50)";
         }, 5600);
     }
 
     async function collectItem() {
-        // Уменьшаем баланс локально для скорости
         coins -= 50;
         document.getElementById('coins').innerText = coins;
 
@@ -185,9 +192,16 @@
             document.getElementById('win-overlay').style.display = 'none';
             document.getElementById('roulette-box').style.display = 'none';
             document.getElementById('case-ui').style.display = 'block';
+            
+            // Разблокируем возможность крутить снова
+            isSpinning = false;
+            document.getElementById('open-btn').disabled = false;
+            
             loadData();
         } catch (e) {
             alert("Ошибка сохранения на сервере!");
+            isSpinning = false;
+            document.getElementById('open-btn').disabled = false;
         }
     }
 
@@ -217,6 +231,10 @@
     }
 
     function showScreen(id, el) {
+        if (isSpinning && id !== 'case') {
+            alert("Дождитесь окончания прокрутки!");
+            return;
+        }
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
