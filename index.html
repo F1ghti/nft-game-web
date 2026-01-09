@@ -190,7 +190,20 @@
         if(id === 'top-screen') loadTop();
     }
 
-    setTimeout(init, 500);
+    // Вместо setTimeout(init, 500); используй это:
+tg.onEvent('mainButtonClicked', function(){}); // фиктивный слушатель для активации
+
+if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    init(); 
+} else {
+    // Если данных нет сразу, ждем готовности WebApp
+    tg.ready();
+    // Повторная попытка через секунду, если Telegram тормозит
+    setTimeout(() => {
+        if (!MY_ID) init();
+    }, 1000);
+}
 </script>
 </body>
 </html>
+
