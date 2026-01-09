@@ -26,19 +26,24 @@
         .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; }
         .nav-item.active { opacity: 1; color: var(--primary); }
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
+        
+        /* Состояние загрузки */
+        #loading-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 2000; }
     </style>
 </head>
 <body>
 
+    <div id="loading-screen">Загрузка данных Telegram...</div>
+
     <div id="error-screen" style="display:none; text-align:center; padding:50px;">
         <h2>❌ Ошибка авторизации</h2>
-        <p>Пожалуйста, запустите игру через официального бота в Telegram.</p>
+        <p>Пожалуйста, запустите игру через бота.</p>
     </div>
 
-    <div id="game-content" style="width:100%; visibility: hidden;">
+    <div id="game-content" style="display:none; width:100%; flex-direction: column; align-items: center;">
         <div class="top-bar">
-            <div class="balance-box">💰 <span id="coins">0</span></div>
-            <div id="u-name" style="font-weight: bold; color: var(--primary);">Загрузка...</div>
+            <div class="balance-box">💰 <span id="coins">...</span></div>
+            <div id="u-name" style="font-weight: bold; color: var(--primary);">...</div>
         </div>
 
         <div id="screen-case" class="screen active">
@@ -74,12 +79,11 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.ready(); // Критически важно: сообщаем TG, что мы готовы принимать данные
+    tg.ready();
     tg.expand();
 
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
     
-    // Переменные данных
     let MY_ID = null;
     let MY_NAME = "Игрок";
     let coins = 0, myItems = [], pendingItem = null;
@@ -90,27 +94,39 @@
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    // Функция инициализации
-    function initApp() {
+    // Главная функция старта
+    function bootstrap() {
         MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
         MY_NAME = tg.initDataUnsafe.user?.username || tg.initDataUnsafe.user?.first_name || "Игрок";
 
         if (!MY_ID) {
-            document.getElementById('error-screen').style.display = 'block';
-            return;
+            // Если ID нет сразу, ждем еще 500мс (иногда ТГ тормозит)
+            setTimeout(() => {
+                MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+                if (MY_ID) startApp();
+                else {
+                    document.getElementById('loading-screen').style.display = 'none';
+                    document.getElementById('error-screen').style.display = 'block';
+                }
+            }, 500);
+        } else {
+            startApp();
         }
+    }
 
-        document.getElementById('game-content').style.visibility = 'visible';
+    async function startApp() {
+        document.getElementById('loading-screen').style.display = 'none';
+        document.getElementById('game-content').style.display = 'flex';
         document.getElementById('u-name').innerText = MY_NAME;
-        
-        // Рисуем превью кейса
+
+        // Отрисовка превью
         const preview = document.getElementById('case-preview');
         preview.innerHTML = '';
         Object.values(itemsConfig).forEach(i => { 
             preview.innerHTML += `<img src="${i.img}">`; 
         });
 
-        loadData();
+        await loadData();
     }
 
     async function loadData() {
@@ -118,14 +134,15 @@
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
             const d = await r.json();
-            coins = d.balance || 0; 
+            coins = d.balance !== undefined ? d.balance : 0;
             myItems = d.inventory || [];
             document.getElementById('coins').innerText = coins;
         } catch (e) {
-            console.error("Ошибка загрузки данных:", e);
+            console.error("Ошибка загрузки:", e);
         }
     }
 
+    // --- Функции игры ---
     function startRoulette() {
         if (coins < 50) return alert("Недостаточно монет!");
         coins -= 50; document.getElementById('coins').innerText = coins;
@@ -220,8 +237,8 @@
         if(id==='inv') renderInv(); else if(id==='market') loadMarket(); else if(id==='top') loadTop();
     }
 
-    // Запускаем инициализацию
-    initApp();
+    // Запуск процесса
+    bootstrap();
 </script>
 </body>
 </html>
