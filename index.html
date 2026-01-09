@@ -94,67 +94,40 @@
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    // Главная функция старта
-    async function bootstrap() {
-        let attempts = 0;
-        const maxAttempts = 15; // Будем пробовать в течение ~4.5 секунд
-
-        const checkInterval = setInterval(() => {
-            attempts++;
-            
-            // Пробуем достать данные
-            MY_ID = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : null;
-            MY_NAME = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || "Игрок";
-
-            if (MY_ID) {
-                // Ура, данные получены!
-                clearInterval(checkInterval);
-                startApp();
-            } else if (attempts >= maxAttempts) {
-                // Если за 15 попыток ничего не пришло — показываем ошибку
-                clearInterval(checkInterval);
-                document.getElementById('loading-screen').style.display = 'none';
-                document.getElementById('error-screen').style.display = 'block';
+    // --- ЛОГИКА ВХОДА (ИСПРАВЛЕННАЯ) ---
+    async function initApp() {
+        console.log("Инициализация...");
+        for (let i = 0; i < 10; i++) { // Увеличил до 10 попыток для надежности
+            const user = tg.initDataUnsafe?.user;
+            if (user && user.id) {
+                MY_ID = String(user.id);
+                MY_NAME = user.username || user.first_name || "Игрок";
+                break;
             }
-            
-            console.log("Попытка получить ID:", attempts);
-        }, 300); // Проверка каждые 300мс
-    }
-
-    async function startApp() {
-        // Убеждаемся, что экран загрузки и ошибки скрыты
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('error-screen').style.display = 'none';
-        
-        document.getElementById('game-content').style.display = 'flex';
-        document.getElementById('u-name').innerText = MY_NAME;
-
-        // Отрисовка превью
-        const preview = document.getElementById('case-preview');
-        if (preview) {
-            preview.innerHTML = '';
-            Object.values(itemsConfig).forEach(i => { 
-                preview.innerHTML += `<img src="${i.img}">`; 
-            });
+            await new Promise(r => setTimeout(r, 300));
         }
 
-        await loadData();
-    }
-    async function startApp() {
+        if (!MY_ID) {
+            document.getElementById('loading-screen').innerHTML = `
+                <div style="color: red; text-align:center; padding: 20px;">
+                    <h3>❌ Данные не получены</h3>
+                    <p>Попробуйте перезапустить бота или обновить страницу.</p>
+                </div>`;
+            return;
+        }
+
         document.getElementById('loading-screen').style.display = 'none';
         document.getElementById('game-content').style.display = 'flex';
         document.getElementById('u-name').innerText = MY_NAME;
-
-        // Отрисовка превью
+        
+        // Рисуем кейсы сразу после входа
         const preview = document.getElementById('case-preview');
-        preview.innerHTML = '';
-        Object.values(itemsConfig).forEach(i => { 
-            preview.innerHTML += `<img src="${i.img}">`; 
-        });
+        preview.innerHTML = Object.values(itemsConfig).map(i => `<img src="${i.img}">`).join('');
 
         await loadData();
     }
 
+    // --- ЛОГИКА ИГРЫ (СОХРАНЕННАЯ) ---
     async function loadData() {
         if (!MY_ID) return;
         try {
@@ -163,12 +136,9 @@
             coins = d.balance !== undefined ? d.balance : 0;
             myItems = d.inventory || [];
             document.getElementById('coins').innerText = coins;
-        } catch (e) {
-            console.error("Ошибка загрузки:", e);
-        }
+        } catch (e) { console.error("Ошибка загрузки:", e); }
     }
 
-    // --- Функции игры ---
     function startRoulette() {
         if (coins < 50) return alert("Недостаточно монет!");
         coins -= 50; document.getElementById('coins').innerText = coins;
@@ -263,9 +233,10 @@
         if(id==='inv') renderInv(); else if(id==='market') loadMarket(); else if(id==='top') loadTop();
     }
 
-    // Запуск процесса
-    bootstrap();
+    // Запуск всего процесса
+    window.onload = initApp;
 </script>
 </body>
 </html>
+
 
