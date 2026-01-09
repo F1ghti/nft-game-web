@@ -106,13 +106,23 @@ async function apiRequest(data){
 
 async function loadData(){
  try {
-    const r = await fetch(`${API_URL}?user_id=${MY_ID}`);
+    const url = `${API_URL}?user_id=${MY_ID}`;
+    console.log("Запрос к:", url);
+    
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("Сервер ответил ошибкой: " + r.status);
+    
     const d = await r.json();
     coins = d.balance; 
     myInv = d.inventory;
     document.getElementById("coins").innerText = coins;
     if(document.getElementById("inv").classList.contains("active")) renderInv();
- } catch(e) { console.error("Ошибка загрузки данных", e); }
+ } catch(e) { 
+    console.error("Ошибка:", e);
+    document.getElementById("coins").innerText = "ОШИБКА";
+    // Если видишь "ОШИБКА" вместо точек — значит сервер недоступен или ссылка в коде неверная
+    alert("Сбой связи с сервером. Проверь SERVER_URL!");
+ }
 }
 
 function openCasePreview(){
@@ -216,3 +226,4 @@ loadData();
 </script>
 </body>
 </html>
+
