@@ -35,7 +35,7 @@
 <body>
 
     <div class="top-bar">
-        <div class="balance-box">💰 <span id="coins">1000</span></div>
+        <div class="balance-box">💰 <span id="coins">...</span></div>
         <div style="font-weight: bold; letter-spacing: 2px;">NFT DELUXE</div>
     </div>
 
@@ -65,15 +65,13 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    // ССЫЛКА НА ТВОЙ СЕРВЕР (обновляй после перезапуска ngrok)
+    // ЗАМЕНИ НА СВОЙ АКТУАЛЬНЫЙ NGROK ПРИ КАЖДОМ ЗАПУСКЕ
     const SERVER_URL = "https://5f50d4760f71.ngrok-free.app"; 
 
-    // Генерация уникального ID для сессии
     const fallbackId = 'guest_' + Math.random().toString(36).substr(2, 9);
     const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : fallbackId;
-    console.log("Ваш ID:", MY_ID);
 
-    let coins = parseInt(localStorage.getItem('coins')) || 1000;
+    let coins = 1000;
     let myItems = JSON.parse(localStorage.getItem('myItems')) || [];
     let marketLots = []; 
 
@@ -85,8 +83,31 @@
 
     function updateUI() {
         document.getElementById('coins').innerText = coins;
-        localStorage.setItem('coins', coins);
         localStorage.setItem('myItems', JSON.stringify(myItems));
+    }
+
+    async function syncBalanceWithServer() {
+        try {
+            await fetch(`${SERVER_URL}/market`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: "sync_balance", user_id: MY_ID, balance: coins })
+            });
+        } catch (e) { console.error("Ошибка синхронизации баланса"); }
+    }
+
+    async function initialLoad() {
+        try {
+            const resp = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
+            const data = await resp.json();
+            coins = data.balance;
+            marketLots = data.lots;
+            updateUI();
+        } catch(e) { 
+            console.error("Сервер недоступен при загрузке");
+            coins = parseInt(localStorage.getItem('coins')) || 1000;
+            updateUI();
+        }
     }
 
     function showScreen(id, el) {
@@ -98,9 +119,12 @@
         if(id === 'market') renderMarket();
     }
 
-    function openCase() {
+    async function openCase() {
         if (coins < 50) { tg.showAlert("Недостаточно монет!"); return; }
-        coins -= 50; updateUI();
+        coins -= 50; 
+        updateUI();
+        await syncBalanceWithServer();
+
         const btn = document.getElementById('roll-btn');
         const img = document.getElementById('main-img');
         const status = document.getElementById('status');
@@ -128,18 +152,13 @@
         const price = prompt("Введите цену продажи:", itemsConfig[item.name].price);
         if(!price || isNaN(price) || price <= 0) return;
 
-        const lot = { 
-            ...item, 
-            marketPrice: parseInt(price), 
-            ownerId: MY_ID,
-            sellerName: tg.initDataUnsafe.user?.first_name || "Игрок"
-        };
+        const lot = { ...item, marketPrice: parseInt(price), ownerId: MY_ID, sellerName: tg.initDataUnsafe.user?.first_name || "Игрок" };
 
         try {
             const response = await fetch(`${SERVER_URL}/market`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ action: "list_lot", lot: lot })
+                body: JSON.stringify({ action: "list_lot", lot: lot, user_id: MY_ID })
             });
 
             if(response.ok) {
@@ -150,34 +169,10 @@
         } catch (e) { tg.showAlert("❌ Ошибка сервера"); }
     }
 
-    async function removeFromMarket(id) {
-        try {
-            const response = await fetch(`${SERVER_URL}/market`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ action: "remove_lot", id: String(id), user_id: MY_ID })
-            });
-
-            if(response.ok) {
-                const lot = marketLots.find(l => String(l.id) === String(id));
-                if(lot) {
-                    myItems.push({ id: lot.id, name: lot.name });
-                    updateUI();
-                }
-                tg.showAlert("📦 Предмет вернулся!");
-                renderMarket();
-            }
-        } catch (e) { tg.showAlert("❌ Ошибка связи"); }
-    }
-
     async function buyLot(id) {
         const lot = marketLots.find(l => String(l.id) === String(id));
         if (!lot) return;
-
-        if (coins < lot.marketPrice) {
-            tg.showAlert("❌ Недостаточно монет!");
-            return;
-        }
+        if (coins < lot.marketPrice) { tg.showAlert("❌ Недостаточно монет!"); return; }
 
         if (!confirm(`Купить ${lot.name} за ${lot.marketPrice}?`)) return;
 
@@ -185,25 +180,35 @@
             const response = await fetch(`${SERVER_URL}/market`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    action: "buy_lot", 
-                    id: String(id), 
-                    buyer_balance: coins 
-                })
+                body: JSON.stringify({ action: "buy_lot", id: String(id), user_id: MY_ID })
             });
 
             const data = await response.json();
             if (response.ok) {
-                coins -= data.price;
+                coins = data.new_balance;
                 myItems.push({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), name: data.item_name });
                 updateUI();
                 renderMarket();
-                tg.showAlert(`✅ Куплено: ${data.item_name}`);
+                tg.showAlert(`✅ Куплено!`);
                 tg.HapticFeedback.notificationOccurred('success');
-            } else {
-                tg.showAlert("❌ " + data.error);
-            }
+            } else { tg.showAlert("❌ " + data.error); }
         } catch (e) { tg.showAlert("❌ Ошибка при покупке"); }
+    }
+
+    async function removeFromMarket(id) {
+        try {
+            const response = await fetch(`${SERVER_URL}/market`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: "remove_lot", id: String(id), user_id: MY_ID })
+            });
+            if(response.ok) {
+                const lot = marketLots.find(l => String(l.id) === String(id));
+                if(lot) { myItems.push({ id: lot.id, name: lot.name }); updateUI(); }
+                renderMarket();
+                tg.showAlert("📦 Предмет возвращен!");
+            }
+        } catch (e) { tg.showAlert("❌ Ошибка связи"); }
     }
 
     function renderInv() {
@@ -224,10 +229,13 @@
         const grid = document.getElementById('market-grid');
         grid.innerHTML = "Загрузка...";
         try {
-            const resp = await fetch(`${SERVER_URL}/market?action=get_lots`);
-            marketLots = await resp.json();
-            grid.innerHTML = marketLots.length ? "" : "Лотов нет";
+            const resp = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
+            const data = await resp.json();
+            marketLots = data.lots;
+            coins = data.balance;
+            updateUI();
 
+            grid.innerHTML = marketLots.length ? "" : "Лотов нет";
             marketLots.forEach(l => {
                 const conf = itemsConfig[l.name];
                 const card = document.createElement('div');
@@ -249,7 +257,7 @@
         } catch(e) { grid.innerHTML = "Сервер недоступен"; }
     }
 
-    updateUI();
+    initialLoad();
 </script>
 </body>
 </html>
