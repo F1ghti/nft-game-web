@@ -24,14 +24,13 @@
         .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
         .roulette-line { display: flex; position: absolute; left: 0; top: 10px; will-change: transform; }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
-        .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; }
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div style="font-weight: 900; font-size: 0.7rem;">NFT TYCOON</div>
+        <div id="user-display" style="font-size: 0.6rem; opacity: 0.5;">ID: ...</div>
     </div>
 
     <div id="screen-case" class="screen active">
@@ -45,7 +44,7 @@
     <div id="screen-market" class="screen"><h2>⚖️ РЫНОК</h2><div class="scroll-area" id="market-list"></div></div>
     <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
 
-    <div id="win-overlay" class="win-overlay"><h2 style="color: gold;">ВЫПАЛО!</h2><img id="win-img" src="" width="150"><h3 id="win-name"></h3><button class="btn" onclick="collectItem()" style="background: #00ff88; color: black;">ЗАБРАТЬ</button></div>
+    <div id="win-overlay" class="win-overlay"><h2>ВЫПАЛО!</h2><img id="win-img" src="" width="150"><h3 id="win-name"></h3><button class="btn" onclick="collectItem()" style="background: #00ff88; color: black;">ЗАБРАТЬ</button></div>
 
     <div class="nav-menu">
         <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
@@ -58,10 +57,18 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
-    const MY_ID = String(tg.initDataUnsafe.user?.id || 'guest');
-    const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Аноним';
 
-    let coins = 0, myItems = [], pendingItem = null, isLoaded = false;
+    // ЖЕСТКАЯ ПРОВЕРКА ID
+    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : null;
+    const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Player';
+
+    if (!MY_ID) {
+        document.body.innerHTML = "<h2 style='text-align:center; margin-top:50px;'>Ошибка авторизации!<br>Зайдите через Telegram бота.</h2>";
+    } else {
+        document.getElementById('user-display').innerText = "ID: " + MY_ID;
+    }
+
+    let coins = 0, myItems = [], pendingItem = null;
     const itemsConfig = {
         "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
         "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100 },
@@ -70,6 +77,7 @@
     };
 
     async function loadData() {
+        if(!MY_ID) return;
         try {
             const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
             const d = await r.json();
@@ -102,7 +110,6 @@
             document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
             document.getElementById('win-overlay').style.display = 'flex';
-            tg.HapticFeedback.notificationOccurred('success');
         }, 5600);
     }
 
@@ -177,7 +184,7 @@
         const r = await fetch(`${SERVER_URL}/market?action=top`);
         const d = await r.json();
         const c = document.getElementById('top-list');
-        c.innerHTML = d.map((p, i) => `<div class="market-lot"><div style="display:flex; align-items:center;"><span style="margin-right:10px;">#${i+1}</span><img src="${p.photo}" style="width:30px; height:30px; border-radius:50%; margin-right:10px;"><b>${p.username}</b></div><div style="color:#00ff88">${p.balance}</div></div>`).join('');
+        c.innerHTML = d.map((p, i) => `<div class="market-lot"><div>#${i+1} <b>${p.username}</b></div><div style="color:#00ff88">${p.balance}</div></div>`).join('');
     }
 
     function showScreen(id, el) {
