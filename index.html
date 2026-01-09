@@ -15,12 +15,13 @@
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
         
-        .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
+        .routte-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
         .roulette-line { display: flex; position: absolute; left: 0; }
         .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
         .roulette-item img { width: 70px; }
         
-        .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
+        .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; scrollbar-width: none; }
+        .scroll-area::-webkit-scrollbar { display: none; }
         .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
         
@@ -28,40 +29,56 @@
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; border: 1px solid var(--glass); z-index: 100; }
-        .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; }
-        .nav-item.active { opacity: 1; color: var(--primary); }
+        .nav-item { font-size: 1.5rem; opacity: 0.3; cursor: pointer; transition: 0.2s; }
+        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.2); }
         
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; }
         
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         .drop-item { display: flex; align-items: center; gap: 15px; padding: 12px; background: rgba(255,255,255,0.03); margin-bottom: 8px; border-radius: 15px; border-left: 4px solid transparent; }
+        
+        #error-screen { display: none; color: #ff4b4b; text-align: center; padding: 20px; }
     </style>
 </head>
 <body>
 
-    <div class="top-bar">
-        <div class="balance-box">💰 <span id="coins">0</span></div>
+    <div id="error-screen" class="screen active">
+        <h3>Загрузка профиля...</h3>
+        <p>Пожалуйста, откройте игру через Telegram бота.</p>
     </div>
 
-    <div id="screen-case" class="screen active">
-        <div id="case-ui" style="text-align: center;">
-            <div onclick="showCaseContents()" style="cursor: pointer;">
-                <svg width="160" height="160" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>
-                <p style="color: var(--primary); font-size: 13px; margin-top: 15px;">Нажми на кейс, чтобы посмотреть дроп</p>
+    <div id="game-content" style="display: none; width: 100%; height: 100%;">
+        <div class="top-bar">
+            <div class="balance-box">💰 <span id="coins">0</span></div>
+        </div>
+
+        <div id="screen-case" class="screen active">
+            <div id="case-ui" style="text-align: center;">
+                <div onclick="showCaseContents()" style="cursor: pointer;">
+                    <svg width="160" height="160" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path></svg>
+                    <p style="color: var(--primary); font-size: 13px; margin-top: 15px;">Нажми на кейс, чтобы посмотреть дроп</p>
+                </div>
             </div>
+
+            <div class="routte-wrapper" id="roulette-box">
+                <div style="position:absolute; left:50%; width:2px; height:100%; background:red; z-index:50; transform:translateX(-50%);"></div>
+                <div class="roulette-line" id="roulette-line"></div>
+            </div>
+            <button id="open-btn" class="btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
         </div>
 
-        <div class="roulette-wrapper" id="roulette-box">
-            <div style="position:absolute; left:50%; width:2px; height:100%; background:red; z-index:50; transform:translateX(-50%);"></div>
-            <div class="roulette-line" id="roulette-line"></div>
+        <div id="screen-inv" class="screen"><h2>🎒 РЮКЗАК</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
+        <div id="screen-market" class="screen"><h2>⚖️ МАРКЕТ</h2><div class="scroll-area" id="market-list"></div></div>
+        <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
+
+        <div class="nav-menu">
+            <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
+            <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
+            <div class="nav-item" onclick="showScreen('market', this)">⚖️</div>
+            <div class="nav-item" onclick="showScreen('top', this)">🏆</div>
         </div>
-        <button id="open-btn" class="btn" onclick="startRoulette()" style="margin-top: 25px;">ОТКРЫТЬ (50)</button>
     </div>
-
-    <div id="screen-inv" class="screen"><h2>🎒 РЮКЗАК</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
-    <div id="screen-market" class="screen"><h2>⚖️ МАРКЕТ</h2><div class="scroll-area" id="market-list"></div></div>
-    <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
 
     <div id="case-modal" class="modal-overlay" onclick="this.style.display='none'">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -78,22 +95,16 @@
         <button class="btn" onclick="collectItem()" style="background:#00ff88; color:black;">ЗАБРАТЬ</button>
     </div>
 
-    <div class="nav-menu">
-        <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
-        <div class="nav-item" onclick="showScreen('inv', this)">🎒</div>
-        <div class="nav-item" onclick="showScreen('market', this)">⚖️</div>
-        <div class="nav-item" onclick="showScreen('top', this)">🏆</div>
-    </div>
-
 <script>
     const tg = window.Telegram.WebApp;
     tg.ready();
     tg.expand();
 
+    // ССЫЛКА НА ТВОЙ СЕРВЕР (Убедись, что она актуальна!)
     const SERVER_URL = "https://7ed2d1db5acd5a60-92-63-106-58.serveousercontent.com"; 
     
-    let MY_ID = "test_user";
-    let MY_NAME = "User";
+    let MY_ID = null;
+    let MY_NAME = "Игрок";
     let coins = 0, myItems = [], marketItems = [], pendingItem = null;
     let isSpinning = false;
 
@@ -104,9 +115,16 @@
     };
 
     async function loadData() {
-        if (tg.initDataUnsafe?.user?.id) {
+        // Проверяем наличие пользователя в Телеграм
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
             MY_ID = String(tg.initDataUnsafe.user.id);
             MY_NAME = tg.initDataUnsafe.user.first_name || "User";
+            
+            document.getElementById('error-screen').style.display = 'none';
+            document.getElementById('game-content').style.display = 'block';
+        } else {
+            console.warn("Пользователь не авторизован через Telegram.");
+            return; 
         }
 
         try {
@@ -120,14 +138,12 @@
                 marketItems = d.market_items || [];
                 document.getElementById('coins').innerText = coins;
                 
-                // Обновляем текущий экран, если мы на инвентаре или маркете
                 const activeScreen = document.querySelector('.screen.active').id;
                 if(activeScreen === 'screen-inv') renderInv();
                 if(activeScreen === 'screen-market') renderMarket();
             }
         } catch (e) {
             console.error("Load Error:", e);
-            setTimeout(loadData, 3000);
         }
     }
 
@@ -138,7 +154,7 @@
         Object.entries(itemsConfig).forEach(([name, data]) => {
             list.innerHTML += `<div class="drop-item" style="border-left-color: ${data.color}">
                 <img src="${data.img}" width="40">
-                <div style="text-align: left;"><div style="color:${data.color};font-weight:bold">${name}</div><small>Цена: ${data.price} 💰</small></div>
+                <div style="text-align: left;"><div style="color:${data.color};font-weight:bold">${name}</div><small>Цена продажи: ${data.price} 💰</small></div>
             </div>`;
         });
         document.getElementById('case-modal').style.display = 'flex';
@@ -148,26 +164,21 @@
         if (isSpinning || coins < 50) return;
         
         isSpinning = true;
-        const btn = document.getElementById('open-btn');
-        btn.disabled = true;
-        btn.innerText = "ОТКРЫВАЕМ...";
-
-        const line = document.getElementById('roulette-line');
+        document.getElementById('open-btn').disabled = true;
         document.getElementById('case-ui').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'block';
         
+        const line = document.getElementById('roulette-line');
         line.innerHTML = ''; 
         line.style.transition = 'none'; 
         line.style.transform = 'translateX(0)';
         
-        const keys = Object.keys(itemsConfig), tape = [];
+        const keys = Object.keys(itemsConfig);
         for(let i=0; i<65; i++) {
             let k = keys[Math.floor(Math.random()*keys.length)];
-            tape.push(k);
+            if(i === 50) pendingItem = k;
             line.innerHTML += `<div class="roulette-item" style="border-bottom:3px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
         }
-        
-        pendingItem = tape[50];
         
         setTimeout(() => {
             line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
@@ -178,48 +189,43 @@
             document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
             document.getElementById('win-overlay').style.display = 'flex';
-            btn.innerText = "ОТКРЫТЬ (50)";
         }, 5600);
     }
 
     async function collectItem() {
         try {
-            await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
+            const res = await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ item_name: pendingItem, balance: coins - 50 })
             });
-            document.getElementById('win-overlay').style.display = 'none';
-            document.getElementById('roulette-box').style.display = 'none';
-            document.getElementById('case-ui').style.display = 'block';
-            isSpinning = false;
-            document.getElementById('open-btn').disabled = false;
-            loadData();
-        } catch (e) { alert("Ошибка!"); }
+            if(res.ok) {
+                document.getElementById('win-overlay').style.display = 'none';
+                document.getElementById('roulette-box').style.display = 'none';
+                document.getElementById('case-ui').style.display = 'block';
+                isSpinning = false;
+                document.getElementById('open-btn').disabled = false;
+                loadData();
+            }
+        } catch (e) { alert("Ошибка сохранения!"); }
     }
 
-    // --- ИНВЕНТАРЬ ---
     function renderInv() {
         const grid = document.getElementById('inv-grid');
-        if (myItems.length === 0) {
-            grid.innerHTML = '<p style="grid-column: 1/3; opacity: 0.5;">Пусто...</p>';
-            return;
-        }
-        grid.innerHTML = myItems.map(i => {
+        grid.innerHTML = myItems.length ? myItems.map(i => {
             let botPrice = Math.floor(itemsConfig[i.name].price * 0.75);
-            return `
-            <div class="inv-card">
+            return `<div class="inv-card">
                 <img src="${itemsConfig[i.name].img}" width="50"><br><small>${i.name}</small>
                 <div style="margin-top:10px; display:flex; flex-direction:column; gap:5px;">
                     <button class="btn" onclick="sellBot(${i.id}, ${botPrice})" style="padding:5px; font-size:10px; background:gray;">БОТУ (${botPrice})</button>
-                    <button class="btn" onclick="listMarket(${i.id}, '${i.name}')" style="padding:5px; font-size:10px;">НА МАРКЕТ</button>
+                    <button class="btn" onclick="listMarket(${i.id}, '${i.name}')" style="padding:5px; font-size:10px;">МАРКЕТ</button>
                 </div>
             </div>`;
-        }).join('');
+        }).join('') : '<p style="grid-column:1/3; opacity:0.5;">Рюкзак пуст</p>';
     }
 
     async function sellBot(id, gain) {
-        if(!confirm("Продать боту за 75%?")) return;
+        if(!confirm("Продать предмет боту?")) return;
         await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
             method:'POST', headers:{'Content-Type':'application/json'},
             body:JSON.stringify({item_db_id:id, gain:gain})
@@ -228,7 +234,7 @@
     }
 
     async function listMarket(id, name) {
-        let price = prompt(`За сколько продаем ${name}?`, itemsConfig[name].price);
+        let price = prompt(`Цена продажи для ${name}:`, itemsConfig[name].price);
         if(!price || isNaN(price)) return;
         await fetch(`${SERVER_URL}/market?action=list_on_market&user_id=${MY_ID}`, {
             method:'POST', headers:{'Content-Type':'application/json'},
@@ -237,28 +243,23 @@
         loadData();
     }
 
-    // --- МАРКЕТ ---
     function renderMarket() {
         const list = document.getElementById('market-list');
-        if (!marketItems || marketItems.length === 0) {
-            list.innerHTML = '<p style="opacity:0.5; text-align:center;">На маркете пока нет лотов</p>';
-            return;
-        }
-        list.innerHTML = marketItems.map(item => `
+        list.innerHTML = marketItems.length ? marketItems.map(item => `
             <div class="drop-item" style="justify-content: space-between; border-left-color: ${itemsConfig[item.name].color}">
                 <div style="display:flex; align-items:center; gap:10px;">
                     <img src="${itemsConfig[item.name].img}" width="35">
                     <div style="text-align:left">
                         <div style="font-weight:bold">${item.name}</div>
-                        <div style="color:#00ff88; font-size:12px;">Цена: ${item.price} 💰</div>
+                        <div style="color:#00ff88; font-size:12px;">${item.price} 💰</div>
                     </div>
                 </div>
                 ${item.seller_id == MY_ID 
-                    ? `<button class="btn" onclick="cancelSale(${item.slot_id})" style="background:red; padding:8px 12px; font-size:10px;">СНЯТЬ</button>`
-                    : `<button class="btn" onclick="buyMarket(${item.slot_id}, ${item.price})" style="background:green; padding:8px 12px; font-size:10px;">КУПИТЬ</button>`
+                    ? `<button class="btn" onclick="cancelSale(${item.slot_id})" style="background:#ff4b4b; padding:8px 12px; font-size:10px;">СНЯТЬ</button>`
+                    : `<button class="btn" onclick="buyMarket(${item.slot_id}, ${item.price})" style="background:#00ff88; color:black; padding:8px 12px; font-size:10px;">КУПИТЬ</button>`
                 }
             </div>
-        `).join('');
+        `).join('') : '<p style="text-align:center; opacity:0.5;">Маркет пуст</p>';
     }
 
     async function cancelSale(slotId) {
@@ -270,7 +271,7 @@
     }
 
     async function buyMarket(slotId, price) {
-        if(coins < price) return alert("Не хватает монет!");
+        if(coins < price) return alert("Недостаточно монет!");
         await fetch(`${SERVER_URL}/market?action=buy_market&user_id=${MY_ID}`, {
             method:'POST', headers:{'Content-Type':'application/json'},
             body:JSON.stringify({slot_id: slotId})
@@ -279,7 +280,7 @@
     }
 
     function showScreen(id, el) {
-        if (isSpinning && id !== 'case') return;
+        if (isSpinning) return;
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
@@ -288,8 +289,9 @@
         if(id === 'market') renderMarket();
     }
 
+    // Инициализация
     loadData();
-    // Авто-обновление раз в 10 секунд для маркета
+    // Обновление раз в 10 секунд
     setInterval(loadData, 10000);
 </script>
 </body>
