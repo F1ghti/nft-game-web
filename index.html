@@ -25,7 +25,6 @@
         .nav-item.active { opacity: 1; color: var(--primary); }
         .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; }
         
-        /* Стили модального окна */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center; }
         .modal-content { background: #1a1a2e; width: 85%; padding: 20px; border-radius: 25px; border: 1px solid var(--primary); text-align: center; animation: modalPop 0.3s ease; }
         @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -45,7 +44,6 @@
                 <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="160">
                 <p style="color: var(--primary); font-size: 12px; opacity: 0.6;">Нажми на кейс, чтобы посмотреть дроп</p>
             </div>
-            <div id="case-preview" style="display: none;"></div>
         </div>
 
         <div class="roulette-wrapper" id="roulette-box">
@@ -85,12 +83,11 @@
     const tg = window.Telegram.WebApp;
     tg.ready(); tg.expand();
 
+    // ПРОВЕРЬ ЭТУ ССЫЛКУ! Она должна совпадать с Serveo
     const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
     
-    let MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : "test_user";
-    let MY_NAME = tg.initDataUnsafe.user?.username || tg.initDataUnsafe.user?.first_name || "Игрок";
-    document.getElementById('u-name').innerText = MY_NAME;
-
+    let MY_ID = "test_user";
+    let MY_NAME = "Игрок";
     let coins = 0, myItems = [], pendingItem = null;
 
     const itemsConfig = {
@@ -98,6 +95,31 @@
         "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100 },
         "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
+
+    async function loadData() {
+        // Ждем пока Telegram отдаст данные пользователя
+        if (!tg.initDataUnsafe?.user?.id) {
+            console.log("Ожидание Telegram ID...");
+            setTimeout(loadData, 1000);
+            return;
+        }
+
+        MY_ID = String(tg.initDataUnsafe.user.id);
+        MY_NAME = tg.initDataUnsafe.user.first_name || "Игрок";
+        document.getElementById('u-name').innerText = MY_NAME;
+
+        try {
+            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
+            const d = await r.json();
+            if (d.balance !== undefined) {
+                coins = d.balance; 
+                myItems = d.inventory;
+                document.getElementById('coins').innerText = coins;
+            }
+        } catch (e) {
+            console.error("Ошибка API:", e);
+        }
+    }
 
     function showCaseContents() {
         const list = document.getElementById('drop-list');
@@ -111,33 +133,33 @@
         document.getElementById('case-modal').style.display = 'flex';
     }
 
-    async function loadData() {
-        try {
-            const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`);
-            const d = await r.json();
-            coins = d.balance; myItems = d.inventory;
-            document.getElementById('coins').innerText = coins;
-        } catch (e) {}
-    }
-
     function startRoulette() {
         if (coins < 50) return alert("Недостаточно монет!");
-        coins -= 50; document.getElementById('coins').innerText = coins;
+        coins -= 50; 
+        document.getElementById('coins').innerText = coins;
+        
         const line = document.getElementById('roulette-line');
         document.getElementById('case-ui').style.display = 'none';
         document.getElementById('roulette-box').style.display = 'block';
-        line.innerHTML = ''; line.style.transition = 'none'; line.style.transform = 'translateX(0)';
+        
+        line.innerHTML = ''; 
+        line.style.transition = 'none'; 
+        line.style.transform = 'translateX(0)';
+        
         const keys = Object.keys(itemsConfig), tape = [];
         for(let i=0; i<65; i++) {
             let k = keys[Math.floor(Math.random()*keys.length)];
             tape.push(k);
             line.innerHTML += `<div class="roulette-item" style="border-bottom:3px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
         }
+        
         pendingItem = tape[50];
+        
         setTimeout(() => {
             line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
             line.style.transform = `translateX(-${50*130 - window.innerWidth/2 + 65}px)`;
         }, 50);
+
         setTimeout(() => {
             document.getElementById('win-img').src = itemsConfig[pendingItem].img;
             document.getElementById('win-name').innerText = pendingItem;
@@ -146,64 +168,51 @@
     }
 
     async function collectItem() {
-        await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
-            method: 'POST', body: JSON.stringify({ item_name: pendingItem, balance: coins })
-        });
-        document.getElementById('win-overlay').style.display = 'none';
-        document.getElementById('roulette-box').style.display = 'none';
-        document.getElementById('case-ui').style.display = 'block';
-        loadData();
+        try {
+            await fetch(`${SERVER_URL}/market?action=add_item&user_id=${MY_ID}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ item_name: pendingItem, balance: coins })
+            });
+            document.getElementById('win-overlay').style.display = 'none';
+            document.getElementById('roulette-box').style.display = 'none';
+            document.getElementById('case-ui').style.display = 'block';
+            loadData();
+        } catch (e) {
+            alert("Ошибка сохранения!");
+        }
     }
 
     function renderInv() {
         document.getElementById('inv-grid').innerHTML = myItems.map(i => `
             <div class="inv-card">
                 <img src="${itemsConfig[i.name].img}" width="50"><br><small>${i.name}</small><br>
-                <button onclick="sellBot(${i.id}, '${i.name}')" style="background:orange; border:none; border-radius:5px; margin-top:5px; font-size:10px;">БОТУ</button>
-                <button onclick="listMarket(${i.id}, '${i.name}')" style="background:cyan; border:none; border-radius:5px; font-size:10px;">МАРКЕТ</button>
+                <button onclick="sellBot(${i.id}, '${i.name}')" style="background:orange; border:none; border-radius:5px; margin-top:5px; font-size:10px; color:white; padding:5px;">БОТУ</button>
             </div>`).join('');
-    }
-
-    async function listMarket(id, name) {
-        let p = prompt("Цена:", itemsConfig[name].price); if(!p) return;
-        await fetch(`${SERVER_URL}/market?action=list_lot&user_id=${MY_ID}&username=${encodeURIComponent(MY_NAME)}`, {
-            method: 'POST', body: JSON.stringify({ item_db_id: id, item_name: name, price: parseInt(p) })
-        });
-        await loadData(); renderInv();
-    }
-
-    async function loadMarket() {
-        const r = await fetch(`${SERVER_URL}/market?action=market_lots`);
-        const lots = await r.json();
-        document.getElementById('market-list').innerHTML = lots.map(l => {
-            let isMy = String(l.seller_id) === String(MY_ID);
-            return `<div class="market-lot" style="background:rgba(255,255,255,0.05); margin-bottom:5px; padding:10px; border-radius:10px; display:flex; justify-content:space-between;">
-                <div><b>${l.item_name}</b><br><small>${isMy ? 'Вы' : l.seller_name}</small></div>
-                <div>${l.price} 💰 <button onclick="${isMy?'cancel':'buy'}(${l.lot_id})" class="btn" style="padding:5px">${isMy?'СНЯТЬ':'КУПИТЬ'}</button></div>
-            </div>`;
-        }).join('');
-    }
-
-    async function cancel(id) { 
-        await fetch(`${SERVER_URL}/market?action=cancel_lot&user_id=${MY_ID}`, { method: 'POST', body: JSON.stringify({ lot_id: id }) }); 
-        await loadData(); loadMarket(); 
-    }
-
-    async function buy(id) { 
-        await fetch(`${SERVER_URL}/market?action=buy_lot&user_id=${MY_ID}`, { method: 'POST', body: JSON.stringify({ lot_id: id }) }); 
-        await loadData(); loadMarket(); 
-    }
-
-    async function loadTop() {
-        const r = await fetch(`${SERVER_URL}/market?action=top`);
-        const d = await r.json();
-        document.getElementById('top-list').innerHTML = d.map((p, i) => `<div style="padding:10px; border-bottom:1px solid rgba(255,255,255,0.1)">#${i+1} ${p.username} — ${p.balance} 💰</div>`).join('');
     }
 
     async function sellBot(id, name) {
         let gain = Math.floor(itemsConfig[name].price * 0.7);
-        await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({item_db_id:id, gain:gain})});
-        await loadData(); renderInv();
+        try {
+            await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
+                method:'POST', 
+                headers: {'Content-Type': 'application/json'},
+                body:JSON.stringify({item_db_id:id, gain:gain})
+            });
+            loadData().then(renderInv);
+        } catch (e) {}
+    }
+
+    async function loadTop() {
+        try {
+            const r = await fetch(`${SERVER_URL}/market?action=top`);
+            const d = await r.json();
+            document.getElementById('top-list').innerHTML = d.map((p, i) => `
+                <div style="padding:10px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between;">
+                    <span>#${i+1} ${p.username}</span>
+                    <span style="color:gold;">${p.balance} 💰</span>
+                </div>`).join('');
+        } catch (e) {}
     }
 
     function showScreen(id, el) {
@@ -211,9 +220,11 @@
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById('screen-'+id).classList.add('active');
         el.classList.add('active');
-        if(id==='inv') renderInv(); else if(id==='market') loadMarket(); else if(id==='top') loadTop();
+        if(id==='inv') renderInv(); 
+        else if(id==='top') loadTop();
     }
 
+    // Запуск загрузки данных при старте
     loadData();
 </script>
 </body>
