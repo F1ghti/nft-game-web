@@ -3,44 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NFT Tycoon</title>
+    <title>NFT Tycoon P2P</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root { --primary: #00d2ff; --accent: #9d50bb; --bg: #050505; --glass: rgba(255, 255, 255, 0.05); }
-        body { background: #050505; color: white; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
-        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
-        .balance-box { background: var(--glass); padding: 8px 15px; border-radius: 20px; color: #00ff88; font-weight: bold; border: 1px solid rgba(0,255,136,0.2); }
+        body { background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; }
+        
+        .top-bar { width: 90%; display: flex; justify-content: space-between; align-items: center; margin-top: 25px; z-index: 10; }
+        .balance-box { background: rgba(255,255,255,0.07); padding: 8px 16px; border-radius: 20px; border: 1px solid rgba(0,255,136,0.3); font-weight: 800; color: #00ff88; }
+
         .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; justify-content: center; position: absolute; top: 0; padding-bottom: 80px; }
         .screen.active { display: flex; }
-        .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; }
-        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-        .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.1); }
+
+        /* РУЛЕТКА */
+        .roulette-wrapper { position: relative; width: 100%; height: 140px; display: none; margin: 20px 0; overflow: hidden; background: rgba(255,255,255,0.02); border-top: 1px solid var(--primary); border-bottom: 1px solid var(--primary); }
+        .roulette-line { display: flex; position: absolute; left: 0; top: 10px; will-change: transform; transition: transform 5s cubic-bezier(0.1, 0, 0, 1); }
+        .roulette-item { min-width: 120px; height: 120px; margin: 0 5px; background: var(--glass); border-radius: 15px; display: flex; align-items: center; justify-content: center; }
+        .roulette-item img { width: 70px; }
+        .roulette-marker { position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #ff4444; transform: translateX(-50%); z-index: 10; box-shadow: 0 0 10px #ff4444; }
+
+        .scroll-area { width: 90%; max-height: 60vh; overflow-y: auto; padding: 10px; }
+        .inv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .inv-card { background: var(--glass); padding: 10px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
         .inv-card img { width: 50px; }
-        .market-lot { background: var(--glass); padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--primary); }
-        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 10px 20px; border-radius: 12px; color: white; font-weight: bold; cursor: pointer; }
-        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 25px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 25px; backdrop-filter: blur(10px); }
-        .nav-item { font-size: 1.4rem; cursor: pointer; opacity: 0.4; }
-        .nav-item.active { opacity: 1; color: var(--primary); }
-        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; flex-direction: column; align-items: center; justify-content: center; }
+        
+        .market-lot { background: var(--glass); padding: 15px; border-radius: 15px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--primary); }
+        .btn { background: linear-gradient(135deg, var(--primary), var(--accent)); border: none; padding: 12px 25px; border-radius: 15px; color: white; font-weight: bold; cursor: pointer; }
+
+        .nav-menu { position: fixed; bottom: 20px; display: flex; gap: 30px; background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 30px; backdrop-filter: blur(10px); border: 1px solid var(--glass); z-index: 100; }
+        .nav-item { font-size: 1.5rem; cursor: pointer; opacity: 0.3; transition: 0.3s; }
+        .nav-item.active { opacity: 1; color: var(--primary); transform: scale(1.1); }
+
+        .win-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; }
     </style>
 </head>
 <body>
+
     <div class="top-bar">
         <div class="balance-box">💰 <span id="coins">...</span></div>
-        <div id="user-tag" style="font-size: 0.7rem; opacity: 0.5;">Загрузка...</div>
+        <div id="user-name" style="font-size: 0.7rem; opacity: 0.6;">...</div>
     </div>
 
     <div id="screen-case" class="screen active">
-        <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="120">
-        <h2 id="status">КЕЙС РОБОТОВ</h2>
-        <button class="btn" id="roll-btn" onclick="startRoll()">ОТКРЫТЬ (50)</button>
+        <div id="case-ui" style="text-align: center;">
+            <img src="https://cdn-icons-png.flaticon.com/512/6161/6161301.png" width="150">
+            <p style="opacity: 0.5;">КЕЙС РОБОТОВ</p>
+        </div>
+        <div class="roulette-wrapper" id="roulette-box">
+            <div class="roulette-marker"></div>
+            <div class="roulette-line" id="roulette-line"></div>
+        </div>
+        <button class="btn" id="roll-btn" onclick="startRoulette()" style="margin-top: 20px;">ОТКРЫТЬ (50)</button>
     </div>
 
     <div id="screen-inv" class="screen"><h2>🎒 ИНВЕНТАРЬ</h2><div class="scroll-area inv-grid" id="inv-grid"></div></div>
-    <div id="screen-market" class="screen"><h2>⚖️ МАРКЕТ</h2><div class="scroll-area" id="market-list"></div></div>
-    <div id="screen-top" class="screen"><h2>🏆 ТОП</h2><div class="scroll-area" id="top-list"></div></div>
+    <div id="screen-market" class="screen"><h2>⚖️ РЫНОК</h2><div class="scroll-area" id="market-list"></div></div>
+    <div id="screen-top" class="screen"><h2>🏆 ТОП ИГРОКОВ</h2><div class="scroll-area" id="top-list"></div></div>
 
-    <div id="win-overlay" class="win-overlay"><h2 style="color:gold">ВЫПАЛО!</h2><img id="win-img" src="" width="120"><h3 id="win-name"></h3><button class="btn" onclick="collectItem()">ЗАБРАТЬ</button></div>
+    <div id="win-overlay" class="win-overlay">
+        <h2 style="color: gold;">ВЫПАЛО!</h2>
+        <img id="win-img" src="" width="150">
+        <h3 id="win-name"></h3>
+        <button class="btn" onclick="collectItem()" style="background: #00ff88; color: black;">ЗАБРАТЬ</button>
+    </div>
 
     <div class="nav-menu">
         <div class="nav-item active" onclick="showScreen('case', this)">📦</div>
@@ -52,35 +77,58 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com";
-    
-    // Пытаемся получить ID, если нет - используем 'test_user' для отладки
-    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'test_user';
+    const SERVER_URL = "https://47dfd4cab99aa560-92-63-106-58.serveousercontent.com"; 
+    const MY_ID = tg.initDataUnsafe.user?.id ? String(tg.initDataUnsafe.user.id) : 'guest_test';
     const MY_NAME = tg.initDataUnsafe.user?.first_name || 'Игрок';
-    document.getElementById('user-tag').innerText = MY_NAME;
+
+    document.getElementById('user-name').innerText = MY_NAME;
 
     let coins = 0, myItems = [], pendingItem = null;
     const itemsConfig = {
-        "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", price: 20 },
-        "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", price: 100 },
-        "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", price: 500 }
+        "Common Bot": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712139.png", color: "#b0c3d9", price: 20 },
+        "Rare Cyber": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712109.png", color: "#4b69ff", price: 100 },
+        "Ultra Legend": { img: "https://cdn-icons-png.flaticon.com/512/4712/4712095.png", color: "#eb4b4b", price: 500 }
     };
 
-    async function load() {
+    async function loadData() {
         const r = await fetch(`${SERVER_URL}/market?user_id=${MY_ID}`);
         const d = await r.json();
         coins = d.balance; myItems = d.inventory || [];
         document.getElementById('coins').innerText = coins;
     }
 
-    function startRoll() {
-        if(coins < 50) return alert("Нет денег!");
+    function startRoulette() {
+        if (coins < 50) return alert("Мало монет!");
         coins -= 50; document.getElementById('coins').innerText = coins;
+        
+        const line = document.getElementById('roulette-line');
+        document.getElementById('case-ui').style.display = 'none';
+        document.getElementById('roulette-box').style.display = 'block';
+        
+        line.innerHTML = '';
+        line.style.transition = 'none';
+        line.style.transform = 'translateX(0)';
+        
         const keys = Object.keys(itemsConfig);
-        pendingItem = keys[Math.floor(Math.random()*keys.length)];
-        document.getElementById('win-img').src = itemsConfig[pendingItem].img;
-        document.getElementById('win-name').innerText = pendingItem;
-        document.getElementById('win-overlay').style.display = 'flex';
+        const tape = [];
+        for(let i=0; i<60; i++) {
+            let k = keys[Math.floor(Math.random()*keys.length)];
+            tape.push(k);
+            line.innerHTML += `<div class="roulette-item" style="border-bottom: 4px solid ${itemsConfig[k].color}"><img src="${itemsConfig[k].img}"></div>`;
+        }
+        
+        pendingItem = tape[45];
+        
+        setTimeout(() => {
+            line.style.transition = 'transform 5s cubic-bezier(0.1, 0, 0, 1)';
+            line.style.transform = `translateX(-${45*130 - window.innerWidth/2 + 65}px)`;
+        }, 50);
+
+        setTimeout(() => {
+            document.getElementById('win-img').src = itemsConfig[pendingItem].img;
+            document.getElementById('win-name').innerText = pendingItem;
+            document.getElementById('win-overlay').style.display = 'flex';
+        }, 5600);
     }
 
     async function collectItem() {
@@ -88,53 +136,65 @@
             method: 'POST', body: JSON.stringify({ item_name: pendingItem, balance: coins })
         });
         document.getElementById('win-overlay').style.display = 'none';
-        load();
+        document.getElementById('roulette-box').style.display = 'none';
+        document.getElementById('case-ui').style.display = 'block';
+        loadData();
     }
 
-    async function sellBot(id, name) {
+    async function sellToBot(id, name) {
         let gain = Math.floor(itemsConfig[name].price * 0.75);
         await fetch(`${SERVER_URL}/market?action=sell_item&user_id=${MY_ID}`, {
-            method: 'POST', body: JSON.stringify({ item_db_id: id, price_gain: gain })
+            method: 'POST', body: JSON.stringify({ item_db_id: id, gain: gain })
         });
-        load(); renderInv();
+        loadData(); renderInv();
     }
 
-    async function listMarket(id, name) {
-        let p = prompt("Цена продажи:", itemsConfig[name].price);
+    async function listOnMarket(id, name) {
+        let p = prompt("Ваша цена:", itemsConfig[name].price);
         if(!p) return;
         await fetch(`${SERVER_URL}/market?action=list_lot&user_id=${MY_ID}`, {
             method: 'POST', body: JSON.stringify({ item_db_id: id, item_name: name, price: parseInt(p), username: MY_NAME })
         });
-        load(); renderInv();
+        loadData(); renderInv();
     }
+
+    async function loadMarket() {
+        const r = await fetch(`${SERVER_URL}/market?action=market_lots`);
+        const lots = await r.json();
+        const cont = document.getElementById('market-list');
+        cont.innerHTML = lots.map(l => {
+            let isMy = String(l.seller_id) === String(MY_ID);
+            return `<div class="market-lot">
+                <div><b>${l.item_name}</b><br><small>${isMy ? 'Ваш лот' : l.seller_name}</small></div>
+                <div style="color:#00ff88">${l.price} 💰</div>
+                <button onclick="${isMy?'cancel':'buy'}(${l.lot_id})" class="btn" style="padding:5px 10px;">${isMy?'СНЯТЬ':'КУПИТЬ'}</button>
+            </div>`;
+        }).join('');
+    }
+
+    async function buy(id) { await fetch(`${SERVER_URL}/market?action=buy_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); loadData(); loadMarket(); }
+    async function cancel(id) { await fetch(`${SERVER_URL}/market?action=cancel_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); loadData(); loadMarket(); }
 
     function renderInv() {
         const g = document.getElementById('inv-grid');
         g.innerHTML = myItems.map(i => `
             <div class="inv-card">
                 <img src="${itemsConfig[i.name].img}"><br><small>${i.name}</small><br>
-                <button onclick="sellBot(${i.id}, '${i.name}')" style="font-size:0.6rem; color:orange; background:none; border:1px solid orange; margin-top:5px;">БОТУ</button>
-                <button onclick="listMarket(${i.id}, '${i.name}')" style="font-size:0.6rem; color:cyan; background:none; border:1px solid cyan; margin-top:5px;">МАРКЕТ</button>
+                <button onclick="sellToBot(${i.id}, '${i.name}')" style="font-size:0.6rem; color:orange; background:none; border:1px solid orange; margin-top:5px;">БОТУ</button>
+                <button onclick="listOnMarket(${i.id}, '${i.name}')" style="font-size:0.6rem; color:cyan; background:none; border:1px solid cyan; margin-top:5px;">РЫНОК</button>
             </div>
         `).join('');
     }
 
-    async function loadMarket() {
-        const r = await fetch(`${SERVER_URL}/market?action=market_lots`);
-        const lots = await r.json();
-        const c = document.getElementById('market-list');
-        c.innerHTML = lots.map(l => {
-            let isMy = String(l.seller_id) === String(MY_ID);
-            return `<div class="market-lot">
-                <div><b>${l.item_name}</b><br><small>${isMy ? 'Ваш лот' : l.seller_name}</small></div>
-                <div style="color:#00ff88">${l.price} 💰</div>
-                <button onclick="${isMy?'cancel':'buy'}(${l.lot_id})" class="btn" style="padding:5px 10px; font-size:0.7rem;">${isMy?'СНЯТЬ':'КУПИТЬ'}</button>
-            </div>`;
-        }).join('');
+    async function loadTop() {
+        const r = await fetch(`${SERVER_URL}/market?action=top`);
+        const d = await r.json();
+        document.getElementById('top-list').innerHTML = d.map((p, i) => `
+            <div class="market-lot">
+                <div>#${i+1} <b>${p.username}</b></div>
+                <div style="color:#00ff88">${p.balance}</div>
+            </div>`).join('');
     }
-
-    async function buy(id) { await fetch(`${SERVER_URL}/market?action=buy_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); load(); loadMarket(); }
-    async function cancel(id) { await fetch(`${SERVER_URL}/market?action=cancel_lot&user_id=${MY_ID}`, {method:'POST', body:JSON.stringify({lot_id:id})}); load(); loadMarket(); }
 
     function showScreen(id, el) {
         document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -143,8 +203,9 @@
         el.classList.add('active');
         if(id==='inv') renderInv();
         if(id==='market') loadMarket();
+        if(id==='top') loadTop();
     }
-    load();
+    loadData();
 </script>
 </body>
 </html>
